@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
-import { playFiversService } from "../services/playfivers";
+import { playFiversService } from "../services/playfivers-v2";
 
 export const gamesRouter = Router();
 
