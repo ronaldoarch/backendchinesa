@@ -7,3 +7,4 @@ cmds = ['npm install', 'npm install -g ts-node typescript']
 [start]
 cmd = 'npx ts-node server/index.ts'
 
+

@@ -31,9 +31,17 @@ mysql://root:senha@hopper.proxy.rlwy.net:36793/railway
 
 ---
 
-## 📋 USAR NA VPS
+## 📋 USAR NO COOLIFY (Backend)
 
-Quando configurar a VPS, use este `.env`:
+**⚠️ IMPORTANTE:** Seu backend está no **Coolify**, não no Railway!
+
+**👉 Veja o guia completo:** [COOLIFY_SETUP.md](./COOLIFY_SETUP.md)
+
+---
+
+## 📋 USAR NA VPS (Alternativo)
+
+Se for usar VPS, use este `.env`:
 
 ```env
 # Railway MySQL
@@ -140,9 +148,10 @@ mysql -h hopper.proxy.rlwy.net -P 36793 -u root -p railway
 
 ## ✅ PRÓXIMO PASSO
 
-1. **Copiar credenciais** da aba "Connect" do Railway
-2. **Criar VPS** (Oracle Cloud grátis ou DigitalOcean)
-3. **Configurar backend** na VPS com essas credenciais
+1. **Copiar credenciais** da aba "Connect" ou "Variables" do Railway
+2. **Configurar variáveis no Coolify** → Veja [COOLIFY_SETUP.md](./COOLIFY_SETUP.md)
+3. **Adicionar variáveis de banco** no serviço backend do Coolify
+4. **Reiniciar o serviço** no Coolify
 
 ---
 

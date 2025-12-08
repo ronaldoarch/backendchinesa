@@ -8,6 +8,7 @@ import { gamesRouter } from "./routes/games";
 import { bannersRouter } from "./routes/banners";
 import { settingsRouter } from "./routes/settings";
 import { uploadsRouter } from "./routes/uploads";
+import { playfiversRouter } from "./routes/playfivers";
 import { initDb } from "./db";
 
 const app = express();
@@ -44,6 +45,7 @@ app.use("/api/games", gamesRouter);
 app.use("/api/banners", bannersRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/uploads", uploadsRouter);
+app.use("/api/playfivers", playfiversRouter);
 
 // Servir index.html para todas as outras rotas (SPA)
 app.get("*", (_req, res) => {

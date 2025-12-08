@@ -261,3 +261,4 @@ Me avise quando criar e me dê o IP que te ajudo com o resto! 🚀
 - ✅ **RAILWAY_MYSQL_SETUP.md** - Setup Railway
 
 **Tudo pronto! Só falta criar a VPS! 💪**
+
