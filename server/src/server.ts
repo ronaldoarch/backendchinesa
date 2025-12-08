@@ -10,11 +10,24 @@ import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
+// CORS configurado antes de tudo
 app.use(
   cors({
-    origin: "*"
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false
   })
 );
+
+// Headers CORS manuais (fallback)
+app.use((_req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
+
 app.use(json());
 app.use(requestLogger);
 
