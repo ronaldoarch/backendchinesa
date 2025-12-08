@@ -5,11 +5,12 @@ import {
   listBannersController,
   updateBannerController
 } from "../controllers/bannersController";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 export const bannersRouter = Router();
 
-bannersRouter.get("/", listBannersController);
-bannersRouter.post("/", createBannerController);
-bannersRouter.put("/:id", updateBannerController);
-bannersRouter.delete("/:id", deleteBannerController);
+bannersRouter.get("/", asyncHandler(listBannersController));
+bannersRouter.post("/", asyncHandler(createBannerController));
+bannersRouter.put("/:id", asyncHandler(updateBannerController));
+bannersRouter.delete("/:id", asyncHandler(deleteBannerController));
 

@@ -7,7 +7,18 @@ export function errorHandler(
   _next: NextFunction
 ) {
   // eslint-disable-next-line no-console
-  console.error(err);
-  res.status(500).json({ message: "Erro interno do servidor" });
+  console.error("❌ Erro capturado:", err);
+  // eslint-disable-next-line no-console
+  console.error("Stack:", err.stack);
+  
+  const isDevelopment = process.env.NODE_ENV !== "production";
+  
+  res.status(500).json({
+    message: "Erro interno do servidor",
+    ...(isDevelopment && {
+      error: err.message,
+      stack: err.stack
+    })
+  });
 }
 

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { Router } from "express";
 import multer from "multer";
 import { uploadFileController } from "../controllers/uploadsController";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 export const uploadsRouter = Router();
 
@@ -25,5 +26,5 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-uploadsRouter.post("/", upload.single("file"), uploadFileController);
+uploadsRouter.post("/", upload.single("file"), asyncHandler(uploadFileController));
 

@@ -5,11 +5,12 @@ import {
   listProvidersController,
   updateProviderController
 } from "../controllers/providersController";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 export const providersRouter = Router();
 
-providersRouter.get("/", listProvidersController);
-providersRouter.post("/", createProviderController);
-providersRouter.put("/:id", updateProviderController);
-providersRouter.delete("/:id", deleteProviderController);
+providersRouter.get("/", asyncHandler(listProvidersController));
+providersRouter.post("/", asyncHandler(createProviderController));
+providersRouter.put("/:id", asyncHandler(updateProviderController));
+providersRouter.delete("/:id", asyncHandler(deleteProviderController));
 

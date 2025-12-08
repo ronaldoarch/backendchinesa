@@ -34,10 +34,29 @@ app.get("*", (_req, res) => {
 
 app.use(errorHandler);
 
-void initDb().then(() => {
-  app.listen(env.port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Servidor API rodando na porta ${env.port}`);
-  });
+// Tratamento de erros assíncronos não capturados
+process.on("unhandledRejection", (reason, promise) => {
+  // eslint-disable-next-line no-console
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
 });
+
+process.on("uncaughtException", (error) => {
+  // eslint-disable-next-line no-console
+  console.error("❌ Uncaught Exception:", error);
+  process.exit(1);
+});
+
+// Inicializar banco e servidor
+void initDb()
+  .then(() => {
+    app.listen(env.port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`✅ Servidor API rodando na porta ${env.port}`);
+    });
+  })
+  .catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error("❌ Erro fatal ao inicializar servidor:", error);
+    process.exit(1);
+  });
 
