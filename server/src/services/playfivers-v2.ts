@@ -168,12 +168,19 @@ async function createClient(): Promise<AxiosInstance> {
 async function addAuthToBody(body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const creds = await getCredentials();
   
-  // Se usar autenticação no body (padrão PlayFivers)
-  if (creds.authMethod.toLowerCase() === "agent" || 
-      creds.authMethod.toLowerCase() === "body" || 
-      !creds.authMethod || 
-      creds.authMethod.toLowerCase() === "default") {
-    
+  // IMPORTANTE: A API PlayFivers pode exigir dados no body mesmo quando usa Bearer/API Key no header
+  // Sempre tentar adicionar credenciais ao body se disponíveis
+  
+  // Se usar autenticação no body (padrão PlayFivers) OU se tiver credenciais disponíveis
+  const shouldAddToBody = 
+    creds.authMethod.toLowerCase() === "agent" || 
+    creds.authMethod.toLowerCase() === "body" || 
+    !creds.authMethod || 
+    creds.authMethod.toLowerCase() === "default" ||
+    // Mesmo para Bearer/API Key, tentar adicionar ao body se tiver secretKey
+    (creds.agentToken && creds.agentSecret);
+  
+  if (shouldAddToBody) {
     // Segundo a documentação: agentToken e secretKey (ou agent_code e agent_secret)
     if (creds.agentToken && creds.agentSecret) {
       const authBody = {
@@ -396,15 +403,31 @@ export const playFiversService = {
           // Garantir que a URL não tenha /api duplicado
           const endpoint = "/api/v2/agent";
           // eslint-disable-next-line no-console
-          console.log(`[PlayFivers] Tentando conectar em: ${PLAYFIVERS_BASE_URL}${endpoint}`);
+          console.log(`[PlayFivers] Tentando conectar em: ${PLAYFIVERS_BASE_URL}${endpoint}`, {
+            method: "POST",
+            body: authBody,
+            hasBody: Object.keys(authBody).length > 0
+          });
           response = await client.post(endpoint, authBody);
         } catch (postError: any) {
-          // Se POST falhar com 405, tentar GET
-          if (postError.response?.status === 405) {
+          // Se POST falhar com 405, tentar GET (mas ainda enviar body)
+          if (postError.response?.status === 405 || postError.response?.status === 422) {
             const endpoint = "/api/v2/agent";
             // eslint-disable-next-line no-console
-            console.log(`[PlayFivers] POST falhou com 405, tentando GET: ${PLAYFIVERS_BASE_URL}${endpoint}`);
-            response = await client.get(endpoint, { data: authBody });
+            console.log(`[PlayFivers] POST falhou com ${postError.response?.status}, tentando GET com body: ${PLAYFIVERS_BASE_URL}${endpoint}`, {
+              body: authBody,
+              hasBody: Object.keys(authBody).length > 0
+            });
+            // Para GET com body, usar método POST mas com método GET customizado
+            // Ou usar a opção data do axios que funciona para alguns servidores
+            response = await client.request({
+              method: "GET",
+              url: endpoint,
+              data: authBody, // Enviar body mesmo em GET
+              headers: {
+                "Content-Type": "application/json"
+              }
+            });
           } else {
             throw postError;
           }
