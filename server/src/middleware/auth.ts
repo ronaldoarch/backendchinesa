@@ -24,11 +24,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
   (req as AuthRequest).userId = decoded.id;
   // Garantir que is_admin seja boolean (pode vir como 0/1 do JWT)
+  // Fazer cast para any para permitir verificação de diferentes tipos em runtime
+  const isAdminValue: any = decoded.is_admin;
   (req as AuthRequest).userIsAdmin = Boolean(
-    decoded.is_admin === true || 
-    decoded.is_admin === 1 || 
-    decoded.is_admin === "true" ||
-    decoded.is_admin === "1"
+    isAdminValue === true || 
+    isAdminValue === 1 || 
+    isAdminValue === "true" ||
+    isAdminValue === "1"
   );
 
   next();
@@ -42,13 +44,8 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
     return;
   }
 
-  // Verificar novamente se é admin (pode ser boolean, número ou string)
-  const isAdmin = Boolean(
-    authReq.userIsAdmin === true || 
-    authReq.userIsAdmin === 1 || 
-    authReq.userIsAdmin === "true" ||
-    authReq.userIsAdmin === "1"
-  );
+  // Verificar novamente se é admin (já é boolean, mas verificamos para garantir)
+  const isAdmin = Boolean(authReq.userIsAdmin);
   
   if (!isAdmin) {
     res.status(403).json({ error: "Acesso negado. Apenas administradores podem acessar esta rota." });
