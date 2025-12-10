@@ -144,6 +144,48 @@ export async function importGameController(req: Request, res: Response): Promise
   }
 }
 
+export async function setCallbackUrlController(req: Request, res: Response): Promise<void> {
+  try {
+    const { callbackUrl } = req.body;
+
+    if (!callbackUrl) {
+      res.status(400).json({
+        success: false,
+        message: "URL de callback é obrigatória"
+      });
+      return;
+    }
+
+    // Validar se é uma URL válida
+    try {
+      new URL(callbackUrl);
+    } catch {
+      res.status(400).json({
+        success: false,
+        message: "URL de callback inválida"
+      });
+      return;
+    }
+
+    const result = await playFiversService.setCallbackUrl(callbackUrl);
+    
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    // eslint-disable-next-line no-console
+    console.error("Erro ao configurar callback URL:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Erro ao configurar callback URL"
+    });
+  }
+}
+
 export async function importGamesBulkController(req: Request, res: Response): Promise<void> {
   try {
     const { games } = req.body;

@@ -145,6 +145,27 @@ export function AdminPlayfiversPage() {
     }
   }
 
+  async function handleSetCallbackUrl() {
+    // Obter a URL base da API (remover /api do final se existir)
+    const apiBaseUrl = api.defaults.baseURL?.replace(/\/api$/, "") || "";
+    const callbackUrl = `${apiBaseUrl}/api/playfivers/callback`;
+    
+    try {
+      const response = await api.post("/playfivers/set-callback-url", {
+        callbackUrl
+      });
+      
+      if (response.data.success) {
+        showMessage("success", `✅ Callback URL configurada: ${callbackUrl}`);
+      } else {
+        showMessage("error", `❌ Erro: ${response.data.error || response.data.message}`);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido";
+      showMessage("error", `Erro ao configurar callback URL: ${errorMsg}`);
+    }
+  }
+
   async function handleFetchProviders() {
     setLoading((prev) => ({ ...prev, fetchProviders: true }));
     try {
@@ -401,6 +422,37 @@ export function AdminPlayfiversPage() {
             </button>
           </div>
         </form>
+        
+        {/* Callback URL */}
+        <div style={{ marginTop: "20px", padding: "15px", background: "#1a1a1a", borderRadius: "8px", border: "1px solid #333" }}>
+          <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Callback URL</h3>
+          <p style={{ margin: "5px 0", color: "#999", fontSize: "14px" }}>
+            URL para receber callbacks/webhooks da PlayFivers:
+          </p>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <code style={{ 
+              flex: 1, 
+              minWidth: "300px", 
+              padding: "10px", 
+              background: "#0a0a0a", 
+              borderRadius: "4px", 
+              color: "#4caf50",
+              wordBreak: "break-all"
+            }}>
+              {api.defaults.baseURL?.replace(/\/api$/, "") || ""}/api/playfivers/callback
+            </code>
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={handleSetCallbackUrl}
+            >
+              Configurar na PlayFivers
+            </button>
+          </div>
+          <p style={{ margin: "10px 0 0 0", color: "#666", fontSize: "12px" }}>
+            ⚠️ Certifique-se de que esta URL está acessível publicamente (HTTPS) para receber callbacks.
+          </p>
+        </div>
       </section>
 
       {/* Buscar e Importar Provedores da PlayFivers */}

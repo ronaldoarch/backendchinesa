@@ -360,6 +360,74 @@ export const playFiversService = {
   },
 
   /**
+   * Configurar callback URL na PlayFivers
+   */
+  async setCallbackUrl(callbackUrl: string): Promise<PlayFiversResponse> {
+    try {
+      const client = await createClient();
+      const creds = await getCredentials();
+
+      const requestData: Record<string, unknown> =
+        creds.authMethod === "agent"
+          ? {
+              agent_id: creds.agentId,
+              agent_secret: creds.agentSecret,
+              callback_url: callbackUrl
+            }
+          : {
+              callback_url: callbackUrl
+            };
+
+      // Tentar múltiplos endpoints possíveis para configurar callback
+      const endpoints = [
+        "/v1/agent/callback",
+        "/agent/callback",
+        "/v1/callback",
+        "/callback",
+        "/webhook",
+        "/v1/webhook",
+        "/agent/webhook"
+      ];
+
+      let lastError: Error | null = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          const { data } = await client.post(endpoint, requestData);
+
+          console.log(`✅ Callback URL configurada: ${callbackUrl}`);
+
+          return {
+            success: true,
+            data,
+            message: "Callback URL configurada com sucesso"
+          };
+        } catch (error: any) {
+          lastError = error;
+
+          // Se for 404, tentar próximo endpoint
+          if (error.response?.status === 404) {
+            continue;
+          }
+
+          // Se for outro erro, não tentar mais endpoints
+          break;
+        }
+      }
+
+      throw lastError || new Error("Nenhum endpoint aceitou a configuração de callback");
+    } catch (error: any) {
+      console.error("❌ Erro ao configurar callback URL:", error.message);
+
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message,
+        message: "Erro ao configurar callback URL"
+      };
+    }
+  },
+
+  /**
    * Buscar lista de jogos disponíveis na PlayFivers
    */
   async getAvailableGames(
