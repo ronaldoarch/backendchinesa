@@ -8,7 +8,7 @@ import {
   providerExistsById
 } from "../services/playfiversLocalService";
 
-export async function testConnectionController(_req: Request, res: Response) {
+export async function testConnectionController(_req: Request, res: Response): Promise<void> {
   try {
     const result = await playFiversService.testConnection();
     res.json(result);
@@ -21,11 +21,12 @@ export async function testConnectionController(_req: Request, res: Response) {
   }
 }
 
-export async function listProvidersPlayfiversController(_req: Request, res: Response) {
+export async function listProvidersPlayfiversController(_req: Request, res: Response): Promise<void> {
   try {
     const result = await playFiversService.getAvailableProviders();
     if (!result.success) {
-      return res.status(400).json(result);
+      res.status(400).json(result);
+      return;
     }
     res.json(result);
   } catch (error: any) {
@@ -37,12 +38,13 @@ export async function listProvidersPlayfiversController(_req: Request, res: Resp
   }
 }
 
-export async function listGamesPlayfiversController(req: Request, res: Response) {
+export async function listGamesPlayfiversController(req: Request, res: Response): Promise<void> {
   try {
     const providerId = req.query.provider_id as string | undefined;
     const result = await playFiversService.getAvailableGames(providerId);
     if (!result.success) {
-      return res.status(400).json(result);
+      res.status(400).json(result);
+      return;
     }
     res.json(result);
   } catch (error: any) {
@@ -54,22 +56,24 @@ export async function listGamesPlayfiversController(req: Request, res: Response)
   }
 }
 
-export async function importProviderController(req: Request, res: Response) {
+export async function importProviderController(req: Request, res: Response): Promise<void> {
   try {
     const { name, externalId } = req.body;
 
     if (!name || !externalId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Nome e ID externo são obrigatórios"
       });
+      return;
     }
 
     if (await providerExistsByExternalId(externalId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Provedor já existe no banco de dados"
       });
+      return;
     }
 
     const provider = await createProviderFromPlayfivers({ name, externalId });
@@ -90,29 +94,32 @@ export async function importProviderController(req: Request, res: Response) {
   }
 }
 
-export async function importGameController(req: Request, res: Response) {
+export async function importGameController(req: Request, res: Response): Promise<void> {
   try {
     const { providerId, name, externalId } = req.body;
 
     if (!providerId || !name || !externalId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Provedor, nome e ID externo são obrigatórios"
       });
+      return;
     }
 
     if (!(await providerExistsById(Number(providerId)))) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Provedor não encontrado"
       });
+      return;
     }
 
     if (await gameExists(externalId, Number(providerId))) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Jogo já existe no banco de dados"
       });
+      return;
     }
 
     const game = await createGameFromPlayfivers({
@@ -137,15 +144,16 @@ export async function importGameController(req: Request, res: Response) {
   }
 }
 
-export async function importGamesBulkController(req: Request, res: Response) {
+export async function importGamesBulkController(req: Request, res: Response): Promise<void> {
   try {
     const { games } = req.body;
 
     if (!Array.isArray(games) || games.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Lista de jogos é obrigatória"
       });
+      return;
     }
 
     const imported: any[] = [];

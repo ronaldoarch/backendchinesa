@@ -4,7 +4,7 @@ import { getSettings, upsertSetting } from "../services/settingsService";
 
 const settingsObjectSchema = z.record(z.string(), z.string());
 
-export async function listSettingsController(_req: Request, res: Response) {
+export async function listSettingsController(_req: Request, res: Response): Promise<void> {
   const settings = await getSettings();
   // Converter array para objeto Record<string, string>
   const settingsObject: Record<string, string> = {};
@@ -14,10 +14,11 @@ export async function listSettingsController(_req: Request, res: Response) {
   res.json(settingsObject);
 }
 
-export async function upsertSettingsController(req: Request, res: Response) {
+export async function upsertSettingsController(req: Request, res: Response): Promise<void> {
   const parsed = settingsObjectSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
+    res.status(400).json(parsed.error.flatten());
+    return;
   }
 
   await Promise.all(

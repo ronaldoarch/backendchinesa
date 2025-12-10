@@ -6,18 +6,20 @@ export interface AuthRequest extends Request {
   userIsAdmin?: boolean;
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Token não fornecido" });
+    res.status(401).json({ error: "Token não fornecido" });
+    return;
   }
 
   const token = authHeader.substring(7);
   const decoded = verifyToken(token);
 
   if (!decoded) {
-    return res.status(401).json({ error: "Token inválido ou expirado" });
+    res.status(401).json({ error: "Token inválido ou expirado" });
+    return;
   }
 
   (req as AuthRequest).userId = decoded.id;
@@ -26,15 +28,17 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   const authReq = req as AuthRequest;
   
   if (!authReq.userId) {
-    return res.status(401).json({ error: "Não autenticado" });
+    res.status(401).json({ error: "Não autenticado" });
+    return;
   }
 
   if (!authReq.userIsAdmin) {
-    return res.status(403).json({ error: "Acesso negado. Apenas administradores podem acessar esta rota." });
+    res.status(403).json({ error: "Acesso negado. Apenas administradores podem acessar esta rota." });
+    return;
   }
 
   next();

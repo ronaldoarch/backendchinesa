@@ -13,55 +13,62 @@ const bannerSchema = z.object({
   active: z.boolean().default(true)
 });
 
-export async function listBannersController(_req: Request, res: Response) {
+export async function listBannersController(_req: Request, res: Response): Promise<void> {
   const banners = await listBanners();
   res.json(banners);
 }
 
-export async function createBannerController(req: Request, res: Response) {
+export async function createBannerController(req: Request, res: Response): Promise<void> {
   const parsed = bannerSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
+    res.status(400).json(parsed.error.flatten());
+    return;
   }
 
   const banner = await createBanner(parsed.data);
   res.status(201).json(banner);
 }
 
-export async function updateBannerController(req: Request, res: Response) {
+export async function updateBannerController(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
   if (Number.isNaN(id)) {
-    return res.status(400).json({ message: "ID inválido" });
+    res.status(400).json({ message: "ID inválido" });
+    return;
   }
 
   const parsed = bannerSchema.partial().safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
+    res.status(400).json(parsed.error.flatten());
+    return;
   }
 
   try {
     const updated = await updateBanner(id, parsed.data);
     if (!updated) {
-      return res.status(404).json({ message: "Banner não encontrado" });
+      res.status(404).json({ message: "Banner não encontrado" });
+      return;
     }
     res.json(updated);
   } catch (error: any) {
     if (error.message === "Nada para atualizar") {
-      return res.status(400).json({ message: error.message });
+      res.status(400).json({ message: error.message });
+      return;
     }
     throw error;
   }
 }
 
-export async function deleteBannerController(req: Request, res: Response) {
+export async function deleteBannerController(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
   if (Number.isNaN(id)) {
-    return res.status(400).json({ message: "ID inválido" });
+    res.status(400).json({ message: "ID inválido" });
+    return;
   }
 
   const deleted = await deleteBanner(id);
   if (!deleted) {
-    return res.status(404).json({ message: "Banner não encontrado" });
+    res.status(404).json({ message: "Banner não encontrado" });
+    return;
   }
 
   res.status(204).send();

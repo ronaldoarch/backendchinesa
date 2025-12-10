@@ -10,30 +10,33 @@ const gameSchema = z.object({
   active: z.boolean().default(true)
 });
 
-export async function listGamesController(_req: Request, res: Response) {
+export async function listGamesController(_req: Request, res: Response): Promise<void> {
   const games = await listGames();
   res.json(games);
 }
 
-export async function createGameController(req: Request, res: Response) {
+export async function createGameController(req: Request, res: Response): Promise<void> {
   const parsed = gameSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json(parsed.error.flatten());
+    res.status(400).json(parsed.error.flatten());
+    return;
   }
 
   const game = await createGame(parsed.data);
   res.status(201).json(game);
 }
 
-export async function syncGamePlayfiversController(req: Request, res: Response) {
+export async function syncGamePlayfiversController(req: Request, res: Response): Promise<void> {
   const id = Number(req.params.id);
   if (Number.isNaN(id)) {
-    return res.status(400).json({ message: "ID inválido" });
+    res.status(400).json({ message: "ID inválido" });
+    return;
   }
 
   const game = await findGameWithProvider(id);
   if (!game) {
-    return res.status(404).json({ message: "Jogo não encontrado" });
+    res.status(404).json({ message: "Jogo não encontrado" });
+    return;
   }
 
   try {

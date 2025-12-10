@@ -20,10 +20,11 @@ const loginSchema = z.object({
   password: z.string()
 });
 
-export async function registerController(req: Request, res: Response) {
+export async function registerController(req: Request, res: Response): Promise<void> {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
   }
 
   const { username, password, phone, currency } = parsed.data;
@@ -31,7 +32,8 @@ export async function registerController(req: Request, res: Response) {
   // Verificar se usuário já existe
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
-    return res.status(400).json({ error: "Nome de usuário já está em uso" });
+    res.status(400).json({ error: "Nome de usuário já está em uso" });
+    return;
   }
 
   try {
@@ -55,22 +57,25 @@ export async function registerController(req: Request, res: Response) {
   }
 }
 
-export async function loginController(req: Request, res: Response) {
+export async function loginController(req: Request, res: Response): Promise<void> {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
   }
 
   const { username, password } = parsed.data;
 
   const user = await findUserByUsername(username);
   if (!user) {
-    return res.status(401).json({ error: "Credenciais inválidas" });
+    res.status(401).json({ error: "Credenciais inválidas" });
+    return;
   }
 
   const isValidPassword = await verifyPassword(password, user.password_hash);
   if (!isValidPassword) {
-    return res.status(401).json({ error: "Credenciais inválidas" });
+    res.status(401).json({ error: "Credenciais inválidas" });
+    return;
   }
 
   const token = generateToken(user);
@@ -87,16 +92,18 @@ export async function loginController(req: Request, res: Response) {
   });
 }
 
-export async function meController(req: Request, res: Response) {
+export async function meController(req: Request, res: Response): Promise<void> {
   const userId = (req as any).userId;
   
   if (!userId) {
-    return res.status(401).json({ error: "Não autenticado" });
+    res.status(401).json({ error: "Não autenticado" });
+    return;
   }
 
   const user = await findUserById(userId);
   if (!user) {
-    return res.status(404).json({ error: "Usuário não encontrado" });
+    res.status(404).json({ error: "Usuário não encontrado" });
+    return;
   }
 
   res.json({

@@ -48,9 +48,8 @@ export async function initDb() {
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS settings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        \`key\` VARCHAR(255) UNIQUE NOT NULL,
-        value TEXT
+        \`key\` VARCHAR(255) PRIMARY KEY,
+        value TEXT NOT NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
