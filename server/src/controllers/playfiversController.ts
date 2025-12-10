@@ -98,23 +98,47 @@ export async function importGameController(req: Request, res: Response): Promise
   try {
     const { providerId, name, externalId } = req.body;
 
-    if (!providerId || !name || !externalId) {
+    // Validar e converter tipos
+    const providerIdNum = Number(providerId);
+    const nameStr = String(name || "").trim();
+    const externalIdStr = String(externalId || "").trim();
+
+    if (!providerIdNum || isNaN(providerIdNum) || providerIdNum <= 0) {
       res.status(400).json({
         success: false,
-        message: "Provedor, nome e ID externo são obrigatórios"
+        message: "ID do provedor é obrigatório e deve ser um número válido",
+        received: { providerId, name: nameStr, externalId: externalIdStr }
       });
       return;
     }
 
-    if (!(await providerExistsById(Number(providerId)))) {
+    if (!nameStr) {
       res.status(400).json({
         success: false,
-        message: "Provedor não encontrado"
+        message: "Nome do jogo é obrigatório",
+        received: { providerId: providerIdNum, name, externalId: externalIdStr }
       });
       return;
     }
 
-    if (await gameExists(externalId, Number(providerId))) {
+    if (!externalIdStr) {
+      res.status(400).json({
+        success: false,
+        message: "ID externo do jogo é obrigatório",
+        received: { providerId: providerIdNum, name: nameStr, externalId }
+      });
+      return;
+    }
+
+    if (!(await providerExistsById(providerIdNum))) {
+      res.status(400).json({
+        success: false,
+        message: `Provedor com ID ${providerIdNum} não encontrado no banco de dados`
+      });
+      return;
+    }
+
+    if (await gameExists(externalIdStr, providerIdNum)) {
       res.status(400).json({
         success: false,
         message: "Jogo já existe no banco de dados"
@@ -123,9 +147,9 @@ export async function importGameController(req: Request, res: Response): Promise
     }
 
     const game = await createGameFromPlayfivers({
-      providerId: Number(providerId),
-      name,
-      externalId
+      providerId: providerIdNum,
+      name: nameStr,
+      externalId: externalIdStr
     });
 
     res.json({
@@ -204,29 +228,47 @@ export async function importGamesBulkController(req: Request, res: Response): Pr
     for (const game of games) {
       try {
         const { providerId, name, externalId } = game;
-        if (!providerId || !name || !externalId) {
-          errors.push({ game, error: "Dados incompletos" });
+        
+        // Validar e converter tipos
+        const providerIdNum = Number(providerId);
+        const nameStr = String(name || "").trim();
+        const externalIdStr = String(externalId || "").trim();
+
+        if (!providerIdNum || isNaN(providerIdNum) || providerIdNum <= 0) {
+          errors.push({ game, error: `ID do provedor inválido: ${providerId}` });
           continue;
         }
 
-        if (!(await providerExistsById(Number(providerId)))) {
-          errors.push({ game, error: "Provedor não encontrado" });
+        if (!nameStr) {
+          errors.push({ game, error: "Nome do jogo está vazio" });
           continue;
         }
 
-        if (await gameExists(externalId, Number(providerId))) {
-          errors.push({ game, error: "Jogo já existe" });
+        if (!externalIdStr) {
+          errors.push({ game, error: "ID externo do jogo está vazio" });
+          continue;
+        }
+
+        if (!(await providerExistsById(providerIdNum))) {
+          errors.push({ game, error: `Provedor com ID ${providerIdNum} não encontrado` });
+          continue;
+        }
+
+        if (await gameExists(externalIdStr, providerIdNum)) {
+          errors.push({ game, error: "Jogo já existe no banco" });
           continue;
         }
 
         const created = await createGameFromPlayfivers({
-          providerId: Number(providerId),
-          name,
-          externalId
+          providerId: providerIdNum,
+          name: nameStr,
+          externalId: externalIdStr
         });
         imported.push(created);
       } catch (error: any) {
-        errors.push({ game, error: error.message });
+        // eslint-disable-next-line no-console
+        console.error("Erro ao importar jogo individual:", error, game);
+        errors.push({ game, error: error.message || "Erro desconhecido" });
       }
     }
 

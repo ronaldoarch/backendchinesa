@@ -243,10 +243,15 @@ export function AdminPlayfiversPage() {
         return;
       }
 
+      if (!localProviderId || localProviderId === 0) {
+        showMessage("error", "ID do provedor inválido. Importe o provedor primeiro!");
+        return;
+      }
+
       const response = await api.post("/playfivers/import-game", {
-        providerId: localProviderId,
-        name,
-        externalId: gameId
+        providerId: Number(localProviderId),
+        name: String(name).trim(),
+        externalId: String(gameId).trim()
       });
 
       if (response.data.success) {
@@ -256,7 +261,12 @@ export function AdminPlayfiversPage() {
         showMessage("error", response.data.message || "Erro ao importar jogo");
       }
     } catch (error: any) {
-      showMessage("error", error.response?.data?.message || "Erro ao importar jogo");
+      const errorMsg = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
+                      "Erro ao importar jogo";
+      console.error("Erro ao importar jogo:", error);
+      showMessage("error", `Erro: ${errorMsg}`);
     }
   }
 
@@ -275,16 +285,32 @@ export function AdminPlayfiversPage() {
     setLoading((prev) => ({ ...prev, importing: true }));
 
     try {
-      const gamesToImport = playfiversGames.map((game) => ({
-        providerId: localProvider.id!,
-        name: game.name || game.title || "",
-        externalId: game.game_id || game.id || ""
-      })).filter((g) => g.name && g.externalId);
+      // Filtrar e validar jogos antes de enviar
+      const gamesToImport = playfiversGames
+        .map((game) => {
+          const gameId = game.game_id || game.id || "";
+          const name = game.name || game.title || "";
+          
+          // Validar dados
+          if (!name || !gameId) {
+            return null;
+          }
+
+          return {
+            providerId: Number(localProvider.id!),
+            name: String(name).trim(),
+            externalId: String(gameId).trim()
+          };
+        })
+        .filter((g): g is { providerId: number; name: string; externalId: string } => g !== null);
 
       if (gamesToImport.length === 0) {
-        showMessage("error", "Nenhum jogo válido para importar");
+        showMessage("error", "Nenhum jogo válido para importar. Verifique se os jogos têm nome e ID.");
+        setLoading((prev) => ({ ...prev, importing: false }));
         return;
       }
+
+      console.log(`Enviando ${gamesToImport.length} jogos para importação...`, gamesToImport.slice(0, 3));
 
       const response = await api.post("/playfivers/import-games-bulk", {
         games: gamesToImport
@@ -297,10 +323,20 @@ export function AdminPlayfiversPage() {
         );
         await loadData();
       } else {
-        showMessage("error", "Erro ao importar jogos");
+        showMessage("error", response.data.message || "Erro ao importar jogos");
       }
     } catch (error: any) {
-      showMessage("error", error.response?.data?.message || "Erro ao importar jogos");
+      console.error("Erro ao importar jogos em massa:", error);
+      const errorMsg = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
+                      "Erro ao importar jogos";
+      showMessage("error", `Erro: ${errorMsg}`);
+      
+      // Se houver detalhes dos erros, mostrar
+      if (error.response?.data?.errorsList && Array.isArray(error.response.data.errorsList)) {
+        console.error("Erros detalhados:", error.response.data.errorsList);
+      }
     } finally {
       setLoading((prev) => ({ ...prev, importing: false }));
     }
