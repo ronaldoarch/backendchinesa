@@ -5,8 +5,14 @@ import { RowDataPacket } from "mysql2";
 // Configurações da API PlayFivers
 // Base URL: https://api.playfivers.com
 // API v2: /api/v2/*
-const PLAYFIVERS_BASE_URL =
-  process.env.PLAYFIVERS_BASE_URL ?? "https://api.playfivers.com";
+// Garantir que não tenha /api no final para evitar duplicação
+const getPlayFiversBaseUrl = (): string => {
+  const url = process.env.PLAYFIVERS_BASE_URL ?? "https://api.playfivers.com";
+  // Remover /api do final se existir para evitar duplicação
+  return url.replace(/\/api\/?$/, "");
+};
+
+const PLAYFIVERS_BASE_URL = getPlayFiversBaseUrl();
 
 interface PlayFiversCredentials {
   agentId: string;
@@ -119,8 +125,11 @@ async function createClient(): Promise<AxiosInstance> {
 
   // Interceptor para log de requisições (debug)
   client.interceptors.request.use((config) => {
+    const fullUrl = `${config.baseURL || ""}${config.url || ""}`;
     // eslint-disable-next-line no-console
-    console.log(`[PlayFivers] ${config.method?.toUpperCase()} ${config.url}`, {
+    console.log(`[PlayFivers] ${config.method?.toUpperCase()} ${fullUrl}`, {
+      baseURL: config.baseURL,
+      url: config.url,
       hasAuth: !!config.headers.Authorization || !!config.headers["X-API-Key"],
       authMethod: creds.authMethod
     });
@@ -130,16 +139,20 @@ async function createClient(): Promise<AxiosInstance> {
   // Interceptor para log de respostas (debug)
   client.interceptors.response.use(
     (response) => {
+      const fullUrl = `${response.config.baseURL || ""}${response.config.url || ""}`;
       // eslint-disable-next-line no-console
-      console.log(`[PlayFivers] ✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+      console.log(`[PlayFivers] ✅ ${response.config.method?.toUpperCase()} ${fullUrl} - ${response.status}`);
       return response;
     },
     (error) => {
+      const fullUrl = error.config ? `${error.config.baseURL || ""}${error.config.url || ""}` : "unknown";
       // eslint-disable-next-line no-console
-      console.error(`[PlayFivers] ❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status || "NO_RESPONSE"}`, {
+      console.error(`[PlayFivers] ❌ ${error.config?.method?.toUpperCase()} ${fullUrl} - ${error.response?.status || "NO_RESPONSE"}`, {
         message: error.message,
         responseData: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        baseURL: error.config?.baseURL,
+        url: error.config?.url
       });
       return Promise.reject(error);
     }
@@ -359,11 +372,18 @@ export const playFiversService = {
         // Tentar POST primeiro (algumas APIs requerem body mesmo para "get info")
         let response;
         try {
-          response = await client.post("/api/v2/agent", authBody);
+          // Garantir que a URL não tenha /api duplicado
+          const endpoint = "/api/v2/agent";
+          // eslint-disable-next-line no-console
+          console.log(`[PlayFivers] Tentando conectar em: ${PLAYFIVERS_BASE_URL}${endpoint}`);
+          response = await client.post(endpoint, authBody);
         } catch (postError: any) {
           // Se POST falhar com 405, tentar GET
           if (postError.response?.status === 405) {
-            response = await client.get("/api/v2/agent", { data: authBody });
+            const endpoint = "/api/v2/agent";
+            // eslint-disable-next-line no-console
+            console.log(`[PlayFivers] POST falhou com 405, tentando GET: ${PLAYFIVERS_BASE_URL}${endpoint}`);
+            response = await client.get(endpoint, { data: authBody });
           } else {
             throw postError;
           }
@@ -385,16 +405,47 @@ export const playFiversService = {
             message: `Erro de autenticação (status: ${error.response.status}). Verifique agentToken e secretKey.`
           };
         }
+        
+        // Se for 404, a rota não foi encontrada
+        if (error.response?.status === 404) {
+          const requestUrl = error.config?.url || "/api/v2/agent";
+          const baseUrl = error.config?.baseURL || PLAYFIVERS_BASE_URL;
+          return {
+            success: false,
+            error: `Rota não encontrada: ${baseUrl}${requestUrl}`,
+            message: `A rota ${requestUrl} não foi encontrada na API PlayFivers. Verifique se a URL base está correta.`
+          };
+        }
+        
         throw error;
       }
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error("❌ Erro ao testar conexão com PlayFivers:", error.message);
+      console.error("❌ Erro ao testar conexão com PlayFivers:", error);
+
+      // Extrair mensagem de erro mais detalhada
+      let errorMessage = "Erro desconhecido";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        // Limpar mensagens de erro do axios que podem conter URLs duplicadas
+        errorMessage = error.message.replace(/api\/api\//g, "api/");
+      }
+      
+      // Se a mensagem contém "could not be found" ou "not found", melhorar
+      if (errorMessage.includes("could not be found") || errorMessage.includes("not found")) {
+        const requestUrl = error.config?.url || "/api/v2/agent";
+        const baseUrl = error.config?.baseURL || PLAYFIVERS_BASE_URL;
+        errorMessage = `A rota ${requestUrl} não foi encontrada. URL completa: ${baseUrl}${requestUrl}`;
+      }
 
       return {
         success: false,
-        error: error.response?.data?.message || error.message,
-        message: "Erro ao testar conexão"
+        error: errorMessage,
+        message: "Erro ao testar conexão com a API PlayFivers"
       };
     }
   },
