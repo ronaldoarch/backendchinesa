@@ -54,6 +54,7 @@ export function AdminPlayfiversPage() {
   const [playfiversProviders, setPlayfiversProviders] = useState<PlayFiversProvider[]>([]);
   const [playfiversGames, setPlayfiversGames] = useState<PlayFiversGame[]>([]);
   const [selectedProviderForGames, setSelectedProviderForGames] = useState<string>("");
+  const [gamesLimit, setGamesLimit] = useState<string>("");
 
   // Estados de loading e mensagens
   const [loading, setLoading] = useState({
@@ -645,6 +646,7 @@ export function AdminPlayfiversPage() {
             onChange={(e) => {
               setSelectedProviderForGames(e.target.value);
               setPlayfiversGames([]);
+              setGamesLimit(""); // Limpar limite ao trocar provedor
             }}
             style={{
               padding: "10px",
@@ -670,11 +672,11 @@ export function AdminPlayfiversPage() {
             placeholder="Limite (ex: 100)"
             min="1"
             max="10000"
-            value={""}
+            value={gamesLimit}
             onChange={(e) => {
               const val = e.target.value;
               if (val === "" || (Number(val) > 0 && Number(val) <= 10000)) {
-                // Armazenar em estado se necessário
+                setGamesLimit(val);
               }
             }}
             style={{
@@ -688,18 +690,15 @@ export function AdminPlayfiversPage() {
             }}
             onKeyPress={(e) => {
               if (e.key === "Enter") {
-                const limit = Number((e.target as HTMLInputElement).value);
-                if (limit > 0) {
-                  handleFetchGames(selectedProviderForGames || undefined, limit);
-                }
+                const limit = gamesLimit ? Number(gamesLimit) : undefined;
+                handleFetchGames(selectedProviderForGames || undefined, limit);
               }
             }}
           />
           <button
             className="btn btn-gold"
             onClick={() => {
-              const limitInput = document.querySelector('input[placeholder="Limite (ex: 100)"]') as HTMLInputElement;
-              const limit = limitInput?.value ? Number(limitInput.value) : undefined;
+              const limit = gamesLimit ? Number(gamesLimit) : undefined;
               handleFetchGames(selectedProviderForGames || undefined, limit);
             }}
             disabled={loading.fetchGames}
