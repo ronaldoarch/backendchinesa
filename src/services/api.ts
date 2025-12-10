@@ -21,7 +21,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    // Não limpar token em rotas de autenticação (login/register)
+    const isAuthRoute = error.config?.url?.includes("/auth/login") || 
+                        error.config?.url?.includes("/auth/register");
+    
+    if ((error.response?.status === 401 || error.response?.status === 403) && !isAuthRoute) {
       // Se não estiver na página de admin, limpar token e redirecionar
       if (!window.location.pathname.startsWith("/admin")) {
         localStorage.removeItem("token");

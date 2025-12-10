@@ -11,13 +11,17 @@ type Props = {
 export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }: Props) {
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   
-  // Atualizar modo quando initialMode mudar
+  // Atualizar modo quando initialMode mudar ou modal abrir
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line no-console
+      console.log("🔄 Modal aberto, resetando estado. Modo:", initialMode);
       setMode(initialMode);
       setError("");
       setPassword("");
       setConfirmPassword("");
+      setUsername("");
+      setLoading(false);
     }
   }, [open, initialMode]);
   const [username, setUsername] = useState("");
@@ -29,6 +33,9 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // eslint-disable-next-line no-console
+  console.log("AuthModal renderizado:", { open, mode, initialMode });
+  
   if (!open) return null;
 
   function passwordStrength(value: string) {
@@ -115,17 +122,21 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
 
     try {
       // eslint-disable-next-line no-console
-      console.log("Tentando fazer login com:", { username });
+      console.log("🔐 Iniciando login...", { username });
       
       const response = await api.post("/auth/login", {
         username,
         password
+      }).catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error("❌ Erro na requisição de login:", error);
+        throw error;
       });
 
       // eslint-disable-next-line no-console
-      console.log("Login bem-sucedido:", response.data);
+      console.log("✅ Login bem-sucedido:", response.data);
       // eslint-disable-next-line no-console
-      console.log("Response completa:", response);
+      console.log("📦 Response completa:", response);
 
       // Verificar se a resposta tem os dados esperados
       if (!response.data || !response.data.token || !response.data.user) {
@@ -156,17 +167,36 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
         return;
       }
       
+      // Normalizar is_admin para garantir que seja boolean
+      const normalizedUser = {
+        ...response.data.user,
+        is_admin: Boolean(
+          response.data.user.is_admin === true || 
+          response.data.user.is_admin === 1 || 
+          response.data.user.is_admin === "true" ||
+          response.data.user.is_admin === "1"
+        )
+      };
+      
+      // Atualizar localStorage com usuário normalizado
+      setUser(normalizedUser);
+      
+      // Verificar novamente após normalizar
+      const finalUser = getUser();
+      // eslint-disable-next-line no-console
+      console.log("Usuário normalizado salvo:", finalUser);
+      
       // Chamar onSuccess ANTES de fechar
-      onSuccess(response.data.user);
+      onSuccess(normalizedUser);
       
       // Limpar formulário
       setUsername("");
       setPassword("");
       
-      // Fechar modal após um pequeno delay
+      // Fechar modal após um pequeno delay para garantir que tudo foi salvo
       setTimeout(() => {
         onClose();
-      }, 100);
+      }, 200);
     } catch (err: any) {
       // eslint-disable-next-line no-console
       console.error("Erro no login:", err);

@@ -152,8 +152,12 @@ export function App() {
               <button
                 className="btn btn-ghost"
                 onClick={() => {
+                  // eslint-disable-next-line no-console
+                  console.log("🔓 Botão Login clicado");
                   setAuthMode("login");
                   setAuthOpen(true);
+                  // eslint-disable-next-line no-console
+                  console.log("Modal deve estar aberto agora");
                 }}
               >
                 Login
