@@ -292,9 +292,9 @@ export const playFiversService = {
         }
       }
 
-      throw new Error("Nenhum endpoint de health check respondeu");
+      throw new Error("Nenhum endpoint de health check da API PlayFivers respondeu. Verifique se as credenciais estão corretas e se a API PlayFivers está acessível.");
     } catch (error: any) {
-      console.error("❌ Erro ao testar conexão:", error.message);
+      console.error("❌ Erro ao testar conexão com PlayFivers:", error.message);
 
       return {
         success: false,

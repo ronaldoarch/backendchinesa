@@ -122,10 +122,24 @@ export function AdminPlayfiversPage() {
       if (response.data.success) {
         showMessage("success", "✅ Conexão com PlayFivers OK!");
       } else {
-        showMessage("error", `❌ Erro: ${response.data.error || response.data.message}`);
+        const errorMsg = response.data.error || response.data.message || "Erro desconhecido";
+        // Melhorar mensagem de erro para ser mais clara
+        if (errorMsg.includes("health check")) {
+          showMessage("error", `⚠️ API PlayFivers não respondeu. Verifique se as credenciais estão corretas e se a API está acessível.`);
+        } else {
+          showMessage("error", `❌ Erro: ${errorMsg}`);
+        }
       }
     } catch (error: any) {
-      showMessage("error", `Erro ao testar conexão: ${error.response?.data?.error || error.message}`);
+      const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido";
+      // Melhorar mensagem de erro para ser mais clara
+      if (errorMsg.includes("health check")) {
+        showMessage("error", `⚠️ API PlayFivers não respondeu. Verifique se as credenciais estão corretas e se a API está acessível.`);
+      } else if (error.response?.status === 403) {
+        showMessage("error", `❌ Acesso negado. Verifique se você tem permissões de administrador.`);
+      } else {
+        showMessage("error", `Erro ao testar conexão: ${errorMsg}`);
+      }
     } finally {
       setLoading((prev) => ({ ...prev, testConnection: false }));
     }
