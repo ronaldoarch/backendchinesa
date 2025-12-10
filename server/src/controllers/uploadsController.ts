@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-export function uploadFileController(req: Request, res: Response): void {
+export async function uploadFileController(req: Request, res: Response): Promise<void> {
   if (!req.file) {
     res.status(400).json({ message: "Nenhum arquivo enviado" });
     return;
