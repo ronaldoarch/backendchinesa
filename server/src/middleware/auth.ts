@@ -33,6 +33,15 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     isAdminValue === "1"
   );
 
+  // eslint-disable-next-line no-console
+  console.log("Authenticate middleware:", {
+    userId: decoded.id,
+    username: decoded.username,
+    is_admin_from_token: decoded.is_admin,
+    is_admin_type: typeof decoded.is_admin,
+    userIsAdmin: (req as AuthRequest).userIsAdmin
+  });
+
   next();
 }
 
@@ -47,10 +56,24 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   // Verificar novamente se é admin (já é boolean, mas verificamos para garantir)
   const isAdmin = Boolean(authReq.userIsAdmin);
   
+  // eslint-disable-next-line no-console
+  console.log("RequireAdmin middleware:", {
+    userId: authReq.userId,
+    userIsAdmin: authReq.userIsAdmin,
+    isAdmin,
+    path: req.path,
+    method: req.method
+  });
+  
   if (!isAdmin) {
+    // eslint-disable-next-line no-console
+    console.log("❌ Acesso negado - usuário não é admin");
     res.status(403).json({ error: "Acesso negado. Apenas administradores podem acessar esta rota." });
     return;
   }
+  
+  // eslint-disable-next-line no-console
+  console.log("✅ Acesso permitido - usuário é admin");
 
   next();
 }

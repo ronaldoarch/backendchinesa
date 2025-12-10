@@ -102,7 +102,12 @@ export async function loginController(req: Request, res: Response): Promise<void
     };
 
     // eslint-disable-next-line no-console
-    console.log("Login: Sucesso para usuário", username, "is_admin:", user.is_admin);
+    console.log("Login: Sucesso para usu?rio", username, {
+      userId: user.id,
+      is_admin_from_db: user.is_admin,
+      is_admin_type: typeof user.is_admin,
+      token_generated: !!token
+    });
     res.json(responseData);
   } catch (error) {
     // eslint-disable-next-line no-console
