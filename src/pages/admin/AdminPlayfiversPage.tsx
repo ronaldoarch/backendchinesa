@@ -46,7 +46,8 @@ export function AdminPlayfiversPage() {
   const [settingsForm, setSettingsForm] = useState<Settings>({
     "playfivers.agentId": "",
     "playfivers.secret": "",
-    "playfivers.token": ""
+    "playfivers.token": "",
+    "playfivers.authMethod": "bearer"
   });
 
   // Estados para busca e importação
@@ -93,7 +94,8 @@ export function AdminPlayfiversPage() {
         ...prev,
         "playfivers.agentId": sRes.data["playfivers.agentId"] ?? "",
         "playfivers.secret": sRes.data["playfivers.secret"] ?? "",
-        "playfivers.token": sRes.data["playfivers.token"] ?? ""
+        "playfivers.token": sRes.data["playfivers.token"] ?? "",
+        "playfivers.authMethod": sRes.data["playfivers.authMethod"] ?? "bearer"
       }));
     } catch (error) {
       showMessage("error", "Erro ao carregar dados");
@@ -408,6 +410,23 @@ export function AdminPlayfiversPage() {
               }))
             }
           />
+          <label>
+            <span>Método de Autenticação</span>
+            <select
+              value={settingsForm["playfivers.authMethod"] ?? "bearer"}
+              onChange={(e) =>
+                setSettingsForm((s) => ({
+                  ...s,
+                  "playfivers.authMethod": e.target.value
+                }))
+              }
+            >
+              <option value="bearer">Bearer Token (padrão)</option>
+              <option value="api_key">API Key (X-API-Key header)</option>
+              <option value="agent">Agent (agent_id + agent_secret no body)</option>
+              <option value="basic">Basic Auth</option>
+            </select>
+          </label>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button className="btn btn-gold" type="submit">
             Salvar credenciais

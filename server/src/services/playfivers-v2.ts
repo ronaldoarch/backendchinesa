@@ -65,29 +65,82 @@ async function getCredentials(): Promise<PlayFiversCredentials> {
 async function createClient(): Promise<AxiosInstance> {
   const creds = await getCredentials();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Accept": "application/json"
   };
+
+  // Validar credenciais
+  if (!creds.agentToken && !creds.agentId) {
+    throw new Error("Credenciais PlayFivers não configuradas. Configure agentToken ou agentId/agentSecret.");
+  }
 
   // Configurar autenticação baseado no método
   switch (creds.authMethod.toLowerCase()) {
     case "api_key":
-      headers["X-API-Key"] = creds.agentToken;
+      if (creds.agentToken) {
+        headers["X-API-Key"] = creds.agentToken;
+      }
       break;
     case "bearer":
-      headers["Authorization"] = `Bearer ${creds.agentToken}`;
+      if (creds.agentToken) {
+        headers["Authorization"] = `Bearer ${creds.agentToken}`;
+      }
       break;
     case "agent":
       // Autenticação será no body de cada requisição
+      if (!creds.agentId || !creds.agentSecret) {
+        throw new Error("Para autenticação 'agent', agentId e agentSecret são obrigatórios.");
+      }
+      break;
+    case "basic":
+      // Basic Auth com agentId:agentSecret
+      if (creds.agentId && creds.agentSecret) {
+        const basicAuth = Buffer.from(`${creds.agentId}:${creds.agentSecret}`).toString("base64");
+        headers["Authorization"] = `Basic ${basicAuth}`;
+      }
       break;
     default:
-      headers["Authorization"] = `Bearer ${creds.agentToken}`;
+      // Tentar Bearer por padrão
+      if (creds.agentToken) {
+        headers["Authorization"] = `Bearer ${creds.agentToken}`;
+      }
   }
 
-  return axios.create({
+  const client = axios.create({
     baseURL: PLAYFIVERS_BASE_URL,
     headers,
-    timeout: 30000 // 30 segundos para buscar jogos
+    timeout: 30000 // 30 segundos
   });
+
+  // Interceptor para log de requisições (debug)
+  client.interceptors.request.use((config) => {
+    // eslint-disable-next-line no-console
+    console.log(`[PlayFivers] ${config.method?.toUpperCase()} ${config.url}`, {
+      hasAuth: !!config.headers.Authorization || !!config.headers["X-API-Key"],
+      authMethod: creds.authMethod
+    });
+    return config;
+  });
+
+  // Interceptor para log de respostas (debug)
+  client.interceptors.response.use(
+    (response) => {
+      // eslint-disable-next-line no-console
+      console.log(`[PlayFivers] ✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+      return response;
+    },
+    (error) => {
+      // eslint-disable-next-line no-console
+      console.error(`[PlayFivers] ❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status || "NO_RESPONSE"}`, {
+        message: error.message,
+        responseData: error.response?.data,
+        status: error.response?.status
+      });
+      return Promise.reject(error);
+    }
+  );
+
+  return client;
 }
 
 // Tipos
@@ -146,20 +199,19 @@ export const playFiversService = {
       const creds = await getCredentials();
 
       // Preparar dados conforme método de autenticação
-      const requestData: Record<string, unknown> =
-        creds.authMethod === "agent"
-          ? {
-              agent_id: creds.agentId,
-              agent_secret: creds.agentSecret,
-              provider_id: payload.providerExternalId,
-              game_id: payload.gameExternalId,
-              name: payload.name
-            }
-          : {
-              provider_id: payload.providerExternalId,
-              game_id: payload.gameExternalId,
-              name: payload.name
-            };
+      const requestData: Record<string, unknown> = {
+        provider_id: payload.providerExternalId,
+        providerId: payload.providerExternalId, // Tentar ambos os formatos
+        game_id: payload.gameExternalId,
+        gameId: payload.gameExternalId, // Tentar ambos os formatos
+        name: payload.name,
+        title: payload.name // Algumas APIs usam 'title' em vez de 'name'
+      };
+
+      if (creds.authMethod === "agent") {
+        requestData.agent_id = creds.agentId;
+        requestData.agent_secret = creds.agentSecret;
+      }
 
       // Tentar múltiplos endpoints possíveis
       const endpoints = [
@@ -167,16 +219,20 @@ export const playFiversService = {
         "/games",
         "/casino/games",
         "/api/v1/games",
-        "/agent/games"
+        "/agent/games",
+        "/v1/agent/games",
+        "/v1/casino/games"
       ];
 
       let lastError: Error | null = null;
+      let lastResponse: any = null;
 
       for (const endpoint of endpoints) {
         try {
           const { data } = await client.post(endpoint, requestData);
 
-          console.log(`✅ Jogo registrado com sucesso: ${payload.name}`);
+          // eslint-disable-next-line no-console
+          console.log(`✅ Jogo registrado com sucesso via ${endpoint}: ${payload.name}`);
 
           return {
             success: true,
@@ -185,19 +241,47 @@ export const playFiversService = {
           };
         } catch (error: any) {
           lastError = error;
+          lastResponse = error.response;
 
           // Se for 404, tentar próximo endpoint
           if (error.response?.status === 404) {
             continue;
           }
 
-          // Se for outro erro, não tentar mais endpoints
+          // Se for 401/403, credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `Erro de autenticação ao registrar jogo (status: ${error.response.status})`
+            };
+          }
+
+          // Se for 400, pode ser dados inválidos
+          if (error.response?.status === 400) {
+            return {
+              success: false,
+              error: error.response.data?.message || "Dados inválidos",
+              message: `Erro ao registrar jogo: ${error.response.data?.message || "Dados inválidos"}`
+            };
+          }
+
+          // Para outros erros, não tentar mais endpoints
           break;
         }
       }
 
-      throw lastError || new Error("Todos os endpoints falharam");
+      const errorMessage = lastResponse
+        ? `Todos os endpoints falharam. Último erro: ${lastResponse.status} - ${lastError?.message}`
+        : `Todos os endpoints falharam. ${lastError?.message || "Erro desconhecido"}`;
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Erro ao registrar jogo"
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao registrar jogo na PlayFivers:", error.message);
 
       return {
@@ -219,38 +303,83 @@ export const playFiversService = {
       const client = await createClient();
       const creds = await getCredentials();
 
-      const requestData: Record<string, unknown> =
-        creds.authMethod === "agent"
-          ? {
-              agent_id: creds.agentId,
-              agent_secret: creds.agentSecret,
-              provider_id: providerExternalId,
-              name: providerName
-            }
-          : {
-              provider_id: providerExternalId,
-              name: providerName
-            };
+      const requestData: Record<string, unknown> = {
+        provider_id: providerExternalId,
+        providerId: providerExternalId, // Tentar ambos os formatos
+        name: providerName,
+        title: providerName // Algumas APIs usam 'title'
+      };
+
+      if (creds.authMethod === "agent") {
+        requestData.agent_id = creds.agentId;
+        requestData.agent_secret = creds.agentSecret;
+      }
 
       // Tentar múltiplos endpoints
-      const endpoints = ["/v1/providers", "/providers", "/agent/providers"];
+      const endpoints = [
+        "/v1/providers",
+        "/providers",
+        "/agent/providers",
+        "/v1/agent/providers",
+        "/v1/casino/providers",
+        "/casino/providers"
+      ];
+
+      let lastError: Error | null = null;
+      let lastResponse: any = null;
 
       for (const endpoint of endpoints) {
         try {
           const { data } = await client.post(endpoint, requestData);
+          
+          // eslint-disable-next-line no-console
+          console.log(`✅ Provedor registrado com sucesso via ${endpoint}: ${providerName}`);
+          
           return {
             success: true,
             data,
             message: "Provedor registrado com sucesso"
           };
         } catch (error: any) {
+          lastError = error;
+          lastResponse = error.response;
+
           if (error.response?.status === 404) continue;
-          throw error;
+
+          // Se for 401/403, credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `Erro de autenticação ao registrar provedor (status: ${error.response.status})`
+            };
+          }
+
+          // Se for 400, pode ser dados inválidos
+          if (error.response?.status === 400) {
+            return {
+              success: false,
+              error: error.response.data?.message || "Dados inválidos",
+              message: `Erro ao registrar provedor: ${error.response.data?.message || "Dados inválidos"}`
+            };
+          }
+
+          // Para outros erros, não tentar mais endpoints
+          break;
         }
       }
 
-      throw new Error("Todos os endpoints falharam");
+      const errorMessage = lastResponse
+        ? `Todos os endpoints falharam. Último erro: ${lastResponse.status} - ${lastError?.message}`
+        : `Todos os endpoints falharam. ${lastError?.message || "Erro desconhecido"}`;
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Erro ao registrar provedor"
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao registrar provedor:", error.message);
 
       return {
@@ -266,40 +395,94 @@ export const playFiversService = {
    */
   async testConnection(): Promise<PlayFiversResponse> {
     try {
+      const creds = await getCredentials();
+      
+      // Validar credenciais básicas
+      if (!creds.agentToken && (!creds.agentId || !creds.agentSecret)) {
+        return {
+          success: false,
+          error: "Credenciais não configuradas",
+          message: "Configure as credenciais PlayFivers antes de testar a conexão"
+        };
+      }
+
       const client = await createClient();
 
-      // Tentar múltiplos endpoints de health check
-      const endpoints = ["/health", "/", "/v1/health", "/api/health"];
+      // Tentar múltiplos endpoints de health check e info
+      const endpoints = [
+        "/health",
+        "/",
+        "/v1/health",
+        "/api/health",
+        "/v1/status",
+        "/status",
+        "/v1/info",
+        "/info",
+        "/v1/agent/info",
+        "/agent/info"
+      ];
+
+      let lastError: Error | null = null;
+      let lastResponse: any = null;
 
       for (const endpoint of endpoints) {
         try {
-          const { data } = await client.get(endpoint);
+          const { data, status } = await client.get(endpoint);
+          
+          // Se recebeu resposta, mesmo que seja erro de auth, a API está acessível
           return {
             success: true,
             data,
-            message: "Conexão OK"
+            message: `Conexão OK (endpoint: ${endpoint}, status: ${status})`
           };
         } catch (error: any) {
-          if (error.response?.status === 404) continue;
-          // Se não for 404, pode ser que o endpoint exista mas retorne erro de auth
-          // Isso ainda significa que a API está acessível
+          lastError = error;
+          lastResponse = error.response;
+
+          // Se for 404, tentar próximo endpoint
+          if (error.response?.status === 404) {
+            continue;
+          }
+
+          // Se for 401/403, a API está acessível mas as credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `API acessível mas autenticação falhou (status: ${error.response.status}). Verifique as credenciais.`,
+              data: error.response.data
+            };
+          }
+
+          // Se recebeu resposta (mesmo que erro), a API está acessível
           if (error.response) {
             return {
               success: true,
-              message: "API acessível (erro de autenticação pode ser normal)"
+              message: `API acessível (endpoint: ${endpoint}, status: ${error.response.status})`,
+              data: error.response.data
             };
           }
         }
       }
 
-      throw new Error("Nenhum endpoint de health check da API PlayFivers respondeu. Verifique se as credenciais estão corretas e se a API PlayFivers está acessível.");
+      // Se nenhum endpoint respondeu
+      const errorMessage = lastResponse
+        ? `Nenhum endpoint respondeu corretamente. Último erro: ${lastResponse.status} - ${lastError?.message}`
+        : `Nenhum endpoint respondeu. Verifique se a URL base está correta: ${PLAYFIVERS_BASE_URL}`;
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Falha na conexão com a API PlayFivers"
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao testar conexão com PlayFivers:", error.message);
 
       return {
         success: false,
         error: error.response?.data?.message || error.message,
-        message: "Falha na conexão"
+        message: "Erro ao testar conexão"
       };
     }
   },
@@ -310,18 +493,34 @@ export const playFiversService = {
   async getAvailableProviders(): Promise<PlayFiversResponse<PlayFiversProvider[]>> {
     try {
       const client = await createClient();
+      const creds = await getCredentials();
+
+      // Preparar request config baseado no método de autenticação
+      const requestConfig: any = {};
+
+      // Se usar autenticação agent, pode precisar incluir no body ou params
+      if (creds.authMethod === "agent") {
+        requestConfig.params = {
+          agent_id: creds.agentId,
+          agent_secret: creds.agentSecret
+        };
+      }
 
       // Tentar múltiplos endpoints possíveis
       const endpoints = [
         "/v1/providers",
         "/providers",
         "/agent/providers",
-        "/api/v1/providers"
+        "/api/v1/providers",
+        "/v1/casino/providers",
+        "/casino/providers"
       ];
+
+      let lastError: Error | null = null;
 
       for (const endpoint of endpoints) {
         try {
-          const { data } = await client.get(endpoint);
+          const { data } = await client.get(endpoint, requestConfig);
 
           // Normalizar resposta (pode vir em diferentes formatos)
           let providers: PlayFiversProvider[] = [];
@@ -334,21 +533,58 @@ export const playFiversService = {
             providers = data.data;
           } else if (data.result && Array.isArray(data.result)) {
             providers = data.result;
+          } else if (data.items && Array.isArray(data.items)) {
+            providers = data.items;
+          } else if (data.list && Array.isArray(data.list)) {
+            providers = data.list;
           }
 
-          return {
-            success: true,
-            data: providers,
-            message: `${providers.length} provedores encontrados`
-          };
+          if (providers.length > 0) {
+            // eslint-disable-next-line no-console
+            console.log(`✅ Provedores encontrados via ${endpoint}: ${providers.length}`);
+            return {
+              success: true,
+              data: providers,
+              message: `${providers.length} provedores encontrados`
+            };
+          }
+
+          // Se não encontrou providers mas recebeu resposta, pode ser formato diferente
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️ Endpoint ${endpoint} respondeu mas formato não reconhecido:`, Object.keys(data));
         } catch (error: any) {
-          if (error.response?.status === 404) continue;
-          throw error;
+          lastError = error;
+          
+          // Se for 404, tentar próximo endpoint
+          if (error.response?.status === 404) {
+            continue;
+          }
+
+          // Se for 401/403, credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `Erro de autenticação ao buscar provedores (status: ${error.response.status})`
+            };
+          }
+
+          // Para outros erros, não tentar mais endpoints
+          break;
         }
       }
 
-      throw new Error("Nenhum endpoint retornou dados");
+      const errorMessage = lastError
+        ? `Nenhum endpoint retornou dados. Último erro: ${lastError.message}`
+        : "Nenhum endpoint retornou dados";
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Erro ao buscar provedores"
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao buscar provedores:", error.message);
 
       return {
@@ -367,16 +603,16 @@ export const playFiversService = {
       const client = await createClient();
       const creds = await getCredentials();
 
-      const requestData: Record<string, unknown> =
-        creds.authMethod === "agent"
-          ? {
-              agent_id: creds.agentId,
-              agent_secret: creds.agentSecret,
-              callback_url: callbackUrl
-            }
-          : {
-              callback_url: callbackUrl
-            };
+      // Preparar dados baseado no método de autenticação
+      const requestData: Record<string, unknown> = {
+        callback_url: callbackUrl,
+        webhook_url: callbackUrl // Tentar ambos os nomes
+      };
+
+      if (creds.authMethod === "agent") {
+        requestData.agent_id = creds.agentId;
+        requestData.agent_secret = creds.agentSecret;
+      }
 
       // Tentar múltiplos endpoints possíveis para configurar callback
       const endpoints = [
@@ -386,37 +622,72 @@ export const playFiversService = {
         "/callback",
         "/webhook",
         "/v1/webhook",
-        "/agent/webhook"
+        "/agent/webhook",
+        "/v1/agent/webhook",
+        "/v1/settings/callback",
+        "/settings/callback"
       ];
 
       let lastError: Error | null = null;
+      let lastResponse: any = null;
 
       for (const endpoint of endpoints) {
         try {
-          const { data } = await client.post(endpoint, requestData);
+          // Tentar POST primeiro
+          let response;
+          try {
+            response = await client.post(endpoint, requestData);
+          } catch (postError: any) {
+            // Se POST falhar, tentar PUT
+            if (postError.response?.status === 405) {
+              response = await client.put(endpoint, requestData);
+            } else {
+              throw postError;
+            }
+          }
 
-          console.log(`✅ Callback URL configurada: ${callbackUrl}`);
+          // eslint-disable-next-line no-console
+          console.log(`✅ Callback URL configurada via ${endpoint}: ${callbackUrl}`);
 
           return {
             success: true,
-            data,
-            message: "Callback URL configurada com sucesso"
+            data: response.data,
+            message: `Callback URL configurada com sucesso (endpoint: ${endpoint})`
           };
         } catch (error: any) {
           lastError = error;
+          lastResponse = error.response;
 
           // Se for 404, tentar próximo endpoint
           if (error.response?.status === 404) {
             continue;
           }
 
-          // Se for outro erro, não tentar mais endpoints
+          // Se for 401/403, credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `Erro de autenticação ao configurar callback (status: ${error.response.status})`
+            };
+          }
+
+          // Para outros erros, não tentar mais endpoints
           break;
         }
       }
 
-      throw lastError || new Error("Nenhum endpoint aceitou a configuração de callback");
+      const errorMessage = lastResponse
+        ? `Nenhum endpoint aceitou a configuração. Último erro: ${lastResponse.status} - ${lastError?.message}`
+        : `Nenhum endpoint aceitou a configuração. ${lastError?.message || "Erro desconhecido"}`;
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Não foi possível configurar a callback URL. Verifique a documentação da PlayFivers ou configure manualmente no painel."
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao configurar callback URL:", error.message);
 
       return {
@@ -441,16 +712,17 @@ export const playFiversService = {
       const params: Record<string, string> = {};
       if (providerId) {
         params.provider_id = providerId;
+        params.providerId = providerId; // Tentar ambos os formatos
       }
 
-      // Se usar autenticação agent, pode precisar incluir no body
+      // Se usar autenticação agent, pode precisar incluir no params
       const requestConfig: any = { params };
 
-      if (creds.authMethod === "agent" && providerId) {
-        requestConfig.data = {
+      if (creds.authMethod === "agent") {
+        requestConfig.params = {
+          ...requestConfig.params,
           agent_id: creds.agentId,
-          agent_secret: creds.agentSecret,
-          provider_id: providerId
+          agent_secret: creds.agentSecret
         };
       }
 
@@ -460,8 +732,11 @@ export const playFiversService = {
         "/games",
         "/agent/games",
         "/api/v1/games",
-        "/casino/games"
+        "/casino/games",
+        "/v1/casino/games"
       ];
+
+      let lastError: Error | null = null;
 
       for (const endpoint of endpoints) {
         try {
@@ -478,21 +753,58 @@ export const playFiversService = {
             games = data.data;
           } else if (data.result && Array.isArray(data.result)) {
             games = data.result;
+          } else if (data.items && Array.isArray(data.items)) {
+            games = data.items;
+          } else if (data.list && Array.isArray(data.list)) {
+            games = data.list;
           }
 
-          return {
-            success: true,
-            data: games,
-            message: `${games.length} jogos encontrados`
-          };
+          if (games.length > 0 || data) {
+            // eslint-disable-next-line no-console
+            console.log(`✅ Jogos encontrados via ${endpoint}: ${games.length}`);
+            return {
+              success: true,
+              data: games,
+              message: `${games.length} jogos encontrados`
+            };
+          }
+
+          // Se não encontrou games mas recebeu resposta, pode ser formato diferente
+          // eslint-disable-next-line no-console
+          console.warn(`⚠️ Endpoint ${endpoint} respondeu mas formato não reconhecido:`, Object.keys(data));
         } catch (error: any) {
-          if (error.response?.status === 404) continue;
-          throw error;
+          lastError = error;
+          
+          // Se for 404, tentar próximo endpoint
+          if (error.response?.status === 404) {
+            continue;
+          }
+
+          // Se for 401/403, credenciais podem estar erradas
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            return {
+              success: false,
+              error: "Credenciais inválidas ou sem permissão",
+              message: `Erro de autenticação ao buscar jogos (status: ${error.response.status})`
+            };
+          }
+
+          // Para outros erros, não tentar mais endpoints
+          break;
         }
       }
 
-      throw new Error("Nenhum endpoint retornou dados");
+      const errorMessage = lastError
+        ? `Nenhum endpoint retornou dados. Último erro: ${lastError.message}`
+        : "Nenhum endpoint retornou dados";
+
+      return {
+        success: false,
+        error: errorMessage,
+        message: "Erro ao buscar jogos"
+      };
     } catch (error: any) {
+      // eslint-disable-next-line no-console
       console.error("❌ Erro ao buscar jogos:", error.message);
 
       return {
