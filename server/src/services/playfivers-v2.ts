@@ -680,11 +680,16 @@ export const playFiversService = {
   /**
    * Buscar lista de jogos disponíveis na PlayFivers
    * Endpoint oficial: GET /api/v2/games
-   * Parâmetro opcional: provider_code (query string)
+   * Parâmetros opcionais:
+   *   - provider_code (query string) - Filtrar por provedor
+   *   - limit (query string) - Limitar quantidade (experimental, não documentado)
+   *   - page (query string) - Número da página (experimental, não documentado)
    * Requer agentToken e secretKey no body
    */
   async getAvailableGames(
-    providerId?: string
+    providerId?: string,
+    limit?: number,
+    page?: number
   ): Promise<PlayFiversResponse<PlayFiversGame[]>> {
     try {
       const client = await createClient();
@@ -698,6 +703,13 @@ export const playFiversService = {
       const params: Record<string, string> = {};
       if (providerId) {
         params.provider_code = providerId; // Segundo a documentação, é provider_code
+      }
+      // Tentar adicionar parâmetros de paginação (experimental - não documentado)
+      if (limit && limit > 0) {
+        params.limit = String(limit);
+      }
+      if (page && page > 0) {
+        params.page = String(page);
       }
 
       try {
