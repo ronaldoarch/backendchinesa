@@ -6,6 +6,7 @@ import { settingsRouter } from "./settings";
 import { uploadsRouter } from "./uploads";
 import { playfiversRouter } from "./playfivers";
 import { authRouter } from "./auth";
+import { promotionsRouter } from "./promotions";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -120,6 +121,7 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use("/providers", providersRouter);
 apiRouter.use("/games", gamesRouter);
 apiRouter.use("/banners", bannersRouter);
+apiRouter.use("/promotions", promotionsRouter);
 
 // Rotas protegidas (requerem autenticação e admin)
 apiRouter.use("/settings", authenticate, requireAdmin, settingsRouter);

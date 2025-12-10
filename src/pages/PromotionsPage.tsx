@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "../services/api";
 
 type Props = {
   user: { username: string } | null;
@@ -7,8 +8,35 @@ type Props = {
 
 type Tab = "eventos" | "vip" | "rebate" | "recompensas" | "historico";
 
+type Promotion = {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  category: string;
+  active: boolean;
+  position: number;
+};
+
 export function PromotionsPage({ user, onRequireAuth }: Props) {
   const [tab, setTab] = useState<Tab>("eventos");
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    void loadPromotions();
+  }, []);
+
+  async function loadPromotions() {
+    try {
+      const res = await api.get<Promotion[]>("/promotions");
+      setPromotions(res.data.filter((p) => p.active));
+    } catch (error) {
+      console.error("Erro ao carregar promoções:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function handleChangeTab(next: Tab) {
     if ((next === "vip" || next === "rebate") && !user) {
@@ -64,7 +92,7 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
       </div>
 
       <div className="promos-content">
-        {tab === "eventos" && <EventosView />}
+        {tab === "eventos" && <EventosView promotions={promotions.filter((p) => p.category === "eventos")} loading={loading} />}
         {tab === "vip" && <VipLevelsView user={user} />}
         {tab === "rebate" && <RebateView />}
         {tab === "recompensas" && <TarefaView />}
@@ -78,40 +106,34 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
   );
 }
 
-function EventosView() {
-  const cards = [
-    {
-      title: "Código de bônus",
-      subtitle: "R$ 10 grátis",
-      description: "Ative seu código diário e teste os jogos."
-    },
-    {
-      title: "Bônus de check-in diário",
-      subtitle: "Recompensas todos os dias",
-      description: "Entre todos os dias para acumular bônus."
-    },
-    {
-      title: "Depósito diário",
-      subtitle: "Bônus máx. de R$ 18.888",
-      description: "Recarregue e desbloqueie bônus progressivos."
-    }
-  ];
-
+function EventosView({ promotions, loading }: { promotions: Promotion[]; loading: boolean }) {
   return (
     <div className="promos-events">
       <div className="promos-filter-column">
         <button className="promos-filter-main">Tudo</button>
       </div>
       <div className="promos-cards-column">
-        {cards.map((card) => (
-          <article key={card.title} className="promo-event-card">
-            <div className="promo-event-body">
-              <h3>{card.title}</h3>
-              <p className="promo-event-subtitle">{card.subtitle}</p>
-              <p className="promo-event-desc">{card.description}</p>
-            </div>
-          </article>
-        ))}
+        {loading ? (
+          <div className="promos-empty">Carregando promoções...</div>
+        ) : promotions.length > 0 ? (
+          promotions.map((promo) => (
+            <article key={promo.id} className="promo-event-card">
+              <div className="promo-event-body">
+                <h3>{promo.title}</h3>
+                {promo.subtitle && (
+                  <p className="promo-event-subtitle">{promo.subtitle}</p>
+                )}
+                {promo.description && (
+                  <p className="promo-event-desc">{promo.description}</p>
+                )}
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="promos-empty">
+            Nenhuma promoção disponível no momento.
+          </div>
+        )}
       </div>
     </div>
   );
