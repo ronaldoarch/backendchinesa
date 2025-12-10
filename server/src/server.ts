@@ -39,45 +39,83 @@ app.use((_req, res, next) => {
 app.use(json());
 app.use(requestLogger);
 
+// Criar diretório de uploads se não existir
 const uploadsDir = path.resolve(__dirname, "..", "..", "server", "uploads");
-app.use("/uploads", express.static(uploadsDir));
-
-// Servir arquivos estáticos do frontend (public_html)
-const frontendDir = path.resolve(__dirname, "..", "..", "public_html");
-app.use(express.static(frontendDir));
+try {
+  if (!require("fs").existsSync(uploadsDir)) {
+    require("fs").mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsDir));
+} catch (error) {
+  // eslint-disable-next-line no-console
+  console.warn("⚠️ Aviso: Não foi possível configurar diretório de uploads:", error);
+}
 
 app.use("/api", apiRouter);
 
-// SPA fallback
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(frontendDir, "index.html"));
+// Health check endpoint (importante para Coolify)
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, status: "healthy" });
+});
+
+// Rota raiz - apenas para API
+app.get("/", (_req, res) => {
+  res.json({ 
+    message: "API Backend BigBet777",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      api: "/api"
+    }
+  });
+});
+
+// 404 para rotas não encontradas
+app.use((_req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
 });
 
 app.use(errorHandler);
 
-// Tratamento de erros assíncronos não capturados
+// Tratamento de erros assíncronos não capturados (não deve crashar o servidor)
 process.on("unhandledRejection", (reason, promise) => {
   // eslint-disable-next-line no-console
   console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  // Não fazer exit - apenas logar o erro
 });
 
 process.on("uncaughtException", (error) => {
   // eslint-disable-next-line no-console
   console.error("❌ Uncaught Exception:", error);
-  process.exit(1);
+  // Não fazer exit imediatamente - dar tempo para o servidor processar
+  // O Coolify vai reiniciar se necessário
 });
 
 // Inicializar banco e servidor
 void initDb()
   .then(() => {
-    app.listen(env.port, () => {
+    const server = app.listen(env.port, "0.0.0.0", () => {
       // eslint-disable-next-line no-console
       console.log(`✅ Servidor API rodando na porta ${env.port}`);
+    });
+
+    // Tratamento de erros do servidor
+    server.on("error", (error: any) => {
+      if (error.code === "EADDRINUSE") {
+        // eslint-disable-next-line no-console
+        console.error(`❌ Porta ${env.port} já está em uso`);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error("❌ Erro no servidor:", error);
+      }
     });
   })
   .catch((error) => {
     // eslint-disable-next-line no-console
     console.error("❌ Erro fatal ao inicializar servidor:", error);
-    process.exit(1);
+    // Não fazer exit imediatamente - dar tempo para logs
+    setTimeout(() => {
+      process.exit(1);
+    }, 1000);
   });
 
