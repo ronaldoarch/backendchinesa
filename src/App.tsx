@@ -10,6 +10,7 @@ import { SideMenu } from "./components/SideMenu";
 import { AuthModal } from "./components/AuthModal";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { getUser, removeAuthToken, setUser as saveUserToStorage, api } from "./services/api";
+import { HomeIcon, GiftIcon, CreditCardIcon, HeadphonesIcon, UserIcon } from "./components/Icons";
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -248,7 +249,9 @@ export function App() {
               `bottom-nav-item${isActive ? " active" : ""}`
             }
           >
-            <span className="bottom-nav-icon">🏠</span>
+            <span className="bottom-nav-icon">
+              <HomeIcon size={22} />
+            </span>
             <span className="bottom-nav-label">Início</span>
           </NavLink>
           <NavLink
@@ -257,7 +260,9 @@ export function App() {
               `bottom-nav-item${isActive ? " active" : ""}`
             }
           >
-            <span className="bottom-nav-icon">🎁</span>
+            <span className="bottom-nav-icon">
+              <GiftIcon size={22} />
+            </span>
             <span className="bottom-nav-label">Promoção</span>
           </NavLink>
           <NavLink
@@ -266,7 +271,9 @@ export function App() {
               `bottom-nav-item${isActive ? " active" : ""}`
             }
           >
-            <span className="bottom-nav-icon">💳</span>
+            <span className="bottom-nav-icon">
+              <CreditCardIcon size={22} />
+            </span>
             <span className="bottom-nav-label">Depósito</span>
           </NavLink>
           <NavLink
@@ -275,7 +282,9 @@ export function App() {
               `bottom-nav-item${isActive ? " active" : ""}`
             }
           >
-            <span className="bottom-nav-icon">🎧</span>
+            <span className="bottom-nav-icon">
+              <HeadphonesIcon size={22} />
+            </span>
             <span className="bottom-nav-label">Suporte</span>
           </NavLink>
           <NavLink
@@ -284,7 +293,9 @@ export function App() {
               `bottom-nav-item${isActive ? " active" : ""}`
             }
           >
-            <span className="bottom-nav-icon">👤</span>
+            <span className="bottom-nav-icon">
+              <UserIcon size={22} />
+            </span>
             <span className="bottom-nav-label">Perfil</span>
           </NavLink>
         </nav>

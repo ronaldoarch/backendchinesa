@@ -1,4 +1,17 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import {
+  FireIcon,
+  SlotIcon,
+  ClockIcon,
+  StarIcon,
+  DiceIcon,
+  UserIcon,
+  SignalIcon,
+  GlobeIcon,
+  DownloadIcon,
+  MessageIcon,
+  HelpIcon
+} from "./Icons";
 
 type Props = {
   open: boolean;
@@ -29,22 +42,28 @@ export function SideMenu({ open, onClose }: Props) {
 
         <nav className="side-menu-section">
           <button className="side-menu-item side-menu-item-active">
-            <span>🔥 Popular</span>
+            <FireIcon size={18} className="side-menu-icon" />
+            <span>Popular</span>
           </button>
           <button className="side-menu-item">
-            <span>🎰 Slots</span>
+            <SlotIcon size={18} className="side-menu-icon" />
+            <span>Slots</span>
           </button>
           <button className="side-menu-item">
-            <span>⏱ Recente</span>
+            <ClockIcon size={18} className="side-menu-icon" />
+            <span>Recente</span>
           </button>
           <button className="side-menu-item">
-            <span>⭐ Favoritos</span>
+            <StarIcon size={18} className="side-menu-icon" />
+            <span>Favoritos</span>
           </button>
           <button className="side-menu-item">
-            <span>🎲 Apostas</span>
+            <DiceIcon size={18} className="side-menu-icon" />
+            <span>Apostas</span>
           </button>
           <button className="side-menu-item" onClick={handleGoAgent}>
-            <span>👤 Agente</span>
+            <UserIcon size={18} className="side-menu-icon" />
+            <span>Agente</span>
           </button>
         </nav>
 
@@ -61,23 +80,28 @@ export function SideMenu({ open, onClose }: Props) {
 
         <section className="side-menu-section side-menu-footer">
           <button className="side-menu-item small">
-            <span>📶 Linha 1</span>
+            <SignalIcon size={16} className="side-menu-icon" />
+            <span>Linha 1</span>
           </button>
           <button className="side-menu-item small">
-            <span>🌐 Português</span>
+            <GlobeIcon size={16} className="side-menu-icon" />
+            <span>Português</span>
           </button>
           <a
             href="#baixar"
             className="side-menu-item small side-menu-link"
             onClick={(e) => e.preventDefault()}
           >
-            📥 Baixar app
+            <DownloadIcon size={16} className="side-menu-icon" />
+            <span>Baixar app</span>
           </a>
           <button className="side-menu-item small">
-            <span>💬 Suporte</span>
+            <MessageIcon size={16} className="side-menu-icon" />
+            <span>Suporte</span>
           </button>
           <button className="side-menu-item small">
-            <span>❓ FAQ</span>
+            <HelpIcon size={16} className="side-menu-icon" />
+            <span>FAQ</span>
           </button>
         </section>
 

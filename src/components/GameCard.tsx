@@ -1,3 +1,5 @@
+import { HeartIcon } from "./Icons";
+
 type Props = {
   title: string;
   provider: string;
@@ -64,7 +66,7 @@ export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false
             }}
             title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
           >
-            {isFavorite ? "❤️" : "🤍"}
+            <HeartIcon size={16} color={isFavorite ? "#ff6b6b" : "#fff"} filled={isFavorite} />
           </button>
         )}
       </div>
