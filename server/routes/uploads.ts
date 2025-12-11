@@ -17,9 +17,13 @@ if (!fs.existsSync(uploadDir)) {
   console.log("✅ Diretório de uploads criado (routes):", uploadDir);
 }
 
-console.log("📁 Diretório de uploads (routes):", uploadDir);
-console.log("📁 __dirname (routes):", __dirname);
-console.log("📁 Project root:", projectRoot);
+// Usar uploadDir como finalUploadDir
+const finalUploadDir = uploadDir;
+
+console.log("📁 [UPLOADS ROUTE] Diretório configurado:", finalUploadDir);
+console.log("📁 [UPLOADS ROUTE] __dirname:", __dirname);
+console.log("📁 [UPLOADS ROUTE] Project root:", projectRoot);
+console.log("📁 [UPLOADS ROUTE] Diretório existe?", fs.existsSync(finalUploadDir));
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -37,6 +41,24 @@ const upload = multer({ storage });
 uploadsRouter.post("/", upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "Nenhum arquivo enviado" });
+  }
+
+  // Log detalhado do upload
+  console.log("📤 Arquivo recebido:", {
+    filename: req.file.filename,
+    originalname: req.file.originalname,
+    size: req.file.size,
+    destination: req.file.destination,
+    path: req.file.path,
+    uploadDir: finalUploadDir
+  });
+
+  // Verificar se o arquivo realmente foi salvo
+  const filePath = path.join(finalUploadDir, req.file.filename);
+  if (fs.existsSync(filePath)) {
+    console.log("✅ Arquivo salvo com sucesso em:", filePath);
+  } else {
+    console.error("❌ ERRO: Arquivo não foi salvo! Caminho esperado:", filePath);
   }
 
   const urlPath = `/uploads/${req.file.filename}`;

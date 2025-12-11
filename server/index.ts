@@ -36,9 +36,23 @@ try {
   }
   
   // Log para debug
-  console.log("📁 Diretório de uploads configurado:", uploadsDir);
-  console.log("📁 __dirname atual:", __dirname);
-  console.log("📁 Project root:", projectRoot);
+  console.log("📁 [INDEX] Diretório de uploads configurado:", uploadsDir);
+  console.log("📁 [INDEX] __dirname atual:", __dirname);
+  console.log("📁 [INDEX] Project root:", projectRoot);
+  console.log("📁 [INDEX] Diretório existe?", fs.existsSync(uploadsDir));
+  
+  // Listar arquivos no diretório se existir
+  if (fs.existsSync(uploadsDir)) {
+    try {
+      const files = fs.readdirSync(uploadsDir);
+      console.log("📂 [INDEX] Arquivos no diretório:", files.length, "arquivo(s)");
+      if (files.length > 0) {
+        console.log("📂 [INDEX] Primeiros arquivos:", files.slice(0, 5));
+      }
+    } catch (err) {
+      console.error("❌ [INDEX] Erro ao listar arquivos:", err);
+    }
+  }
   
   // Servir arquivos estáticos de uploads ANTES da rota catch-all
   app.use("/uploads", express.static(uploadsDir, {
@@ -49,14 +63,28 @@ try {
   
   // Middleware para tratar arquivos não encontrados em /uploads (após express.static)
   app.use("/uploads", (req, res) => {
-    console.log("⚠️ Arquivo não encontrado:", req.path, "Procurando em:", uploadsDir);
+    const requestedFile = req.path.replace("/uploads/", "");
+    const filePath = path.join(uploadsDir, requestedFile);
+    
+    console.log("⚠️ [404] Arquivo não encontrado:", req.path);
+    console.log("⚠️ [404] Caminho completo procurado:", filePath);
+    console.log("⚠️ [404] Diretório base:", uploadsDir);
+    console.log("⚠️ [404] Arquivo existe?", fs.existsSync(filePath));
+    
     // Listar arquivos no diretório para debug
     try {
-      const files = fs.readdirSync(uploadsDir);
-      console.log("📂 Arquivos no diretório:", files);
+      if (fs.existsSync(uploadsDir)) {
+        const files = fs.readdirSync(uploadsDir);
+        console.log("📂 [404] Total de arquivos no diretório:", files.length);
+        console.log("📂 [404] Arquivos:", files);
+        console.log("📂 [404] Arquivo procurado está na lista?", files.includes(requestedFile));
+      } else {
+        console.log("❌ [404] Diretório não existe!");
+      }
     } catch (err) {
-      console.log("❌ Erro ao listar arquivos:", err);
+      console.log("❌ [404] Erro ao listar arquivos:", err);
     }
+    
     res.status(404).json({ error: "Arquivo não encontrado" });
   });
   
