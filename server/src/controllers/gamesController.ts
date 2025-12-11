@@ -103,5 +103,50 @@ export async function syncGamePlayfiversController(req: Request, res: Response):
   }
 }
 
+export async function launchGameController(req: Request, res: Response): Promise<void> {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+
+  // Obter userId do token se autenticado (opcional)
+  const userId = (req as any).user?.id;
+
+  const game = await findGameWithProvider(id);
+  if (!game) {
+    res.status(404).json({ error: "Jogo não encontrado" });
+    return;
+  }
+
+  if (!game.externalId || !game.providerExternalId) {
+    res.status(400).json({ error: "Jogo não possui externalId ou providerExternalId configurado" });
+    return;
+  }
+
+  try {
+    const result = await playFiversService.launchGame(
+      game.providerExternalId,
+      game.externalId,
+      userId
+    );
+
+    if (!result.success || !result.data?.url) {
+      res.status(500).json({
+        error: result.error || "Erro ao lançar jogo",
+        message: result.message
+      });
+      return;
+    }
+
+    res.json({ url: result.data.url });
+  } catch (error: any) {
+    console.error("Erro ao lançar jogo:", error);
+    res.status(500).json({
+      error: error.message || "Erro ao lançar jogo"
+    });
+  }
+}
+
 
 

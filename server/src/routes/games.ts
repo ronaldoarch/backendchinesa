@@ -3,7 +3,8 @@ import {
   createGameController,
   listGamesController,
   updateGameController,
-  syncGamePlayfiversController
+  syncGamePlayfiversController,
+  launchGameController
 } from "../controllers/gamesController";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { authenticate, requireAdmin } from "../middleware/auth";
@@ -17,4 +18,7 @@ gamesRouter.get("/", asyncHandler(listGamesController));
 gamesRouter.post("/", authenticate, requireAdmin, asyncHandler(createGameController));
 gamesRouter.put("/:id", authenticate, requireAdmin, asyncHandler(updateGameController));
 gamesRouter.post("/:id/sync-playfivers", authenticate, requireAdmin, asyncHandler(syncGamePlayfiversController));
+
+// Lançar jogo (público - qualquer usuário pode jogar)
+gamesRouter.post("/:id/launch", asyncHandler(launchGameController));
 

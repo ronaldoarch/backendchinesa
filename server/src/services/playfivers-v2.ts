@@ -801,5 +801,74 @@ export const playFiversService = {
         message: "Erro ao buscar jogos"
       };
     }
+  },
+
+  /**
+   * Lançar jogo (obter URL do jogo para o usuário jogar)
+   * POST /api/v2/game_launch
+   * Retorna URL do jogo que deve ser aberta em nova aba/iframe
+   */
+  async launchGame(
+    providerCode: string,
+    gameCode: string,
+    userId?: string | number
+  ): Promise<PlayFiversResponse<{ url: string }>> {
+    try {
+      const client = await createClient();
+
+      // Preparar dados com autenticação
+      const requestData = await addAuthToBody({
+        provider_code: providerCode,
+        game_code: gameCode,
+        ...(userId && { user_id: String(userId) })
+      });
+
+      const { data } = await client.post("/api/v2/game_launch", requestData);
+      
+      console.log(`✅ Jogo lançado: ${gameCode} do provedor ${providerCode}`);
+      
+      // A resposta da PlayFivers geralmente contém uma URL do jogo
+      // Pode estar em data.url, data.game_url, data.launch_url, etc.
+      const gameUrl = data?.url || data?.game_url || data?.launch_url || data?.data?.url;
+      
+      if (!gameUrl) {
+        console.warn("⚠️ Resposta da PlayFivers não contém URL do jogo:", data);
+        return {
+          success: false,
+          error: "URL do jogo não encontrada na resposta",
+          message: "A API não retornou a URL do jogo"
+        };
+      }
+
+      return {
+        success: true,
+        data: { url: gameUrl },
+        message: "Jogo lançado com sucesso"
+      };
+    } catch (error: any) {
+      console.error("❌ Erro ao lançar jogo na PlayFivers:", error.message);
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return {
+          success: false,
+          error: "Credenciais inválidas ou sem permissão",
+          message: `Erro de autenticação (status: ${error.response.status})`
+        };
+      }
+      
+      if (error.response?.status === 422) {
+        return {
+          success: false,
+          error: "Game_code ou provider_code incorreto",
+          message: "Verifique se o game_code e provider_code estão corretos"
+        };
+      }
+
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message,
+        message: "Erro ao lançar jogo"
+      };
+    }
   }
 };

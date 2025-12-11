@@ -1,4 +1,6 @@
+import React from "react";
 import { HeartIcon } from "./Icons";
+import { api } from "../services/api";
 
 type Props = {
   title: string;
@@ -10,6 +12,8 @@ type Props = {
 };
 
 export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false, onToggleFavorite }: Props) {
+  const [loading, setLoading] = React.useState(false);
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (gameId && onToggleFavorite) {
@@ -17,8 +21,34 @@ export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false
     }
   };
 
+  const handlePlayClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!gameId) return;
+
+    setLoading(true);
+    try {
+      const response = await api.post<{ url: string }>(`/games/${gameId}/launch`);
+      if (response.data?.url) {
+        // Abrir jogo em nova aba
+        window.open(response.data.url, "_blank", "noopener,noreferrer");
+      } else {
+        alert("Erro: URL do jogo não retornada pela API");
+      }
+    } catch (error: any) {
+      console.error("Erro ao lançar jogo:", error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Erro ao abrir o jogo";
+      alert(`Erro ao abrir o jogo: ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <article className="game-card">
+    <article 
+      className="game-card"
+      onClick={handlePlayClick}
+      style={{ cursor: gameId ? (loading ? "wait" : "pointer") : "default" }}
+    >
       <div className="game-card-thumbnail" style={{ position: "relative" }}>
         {imageUrl ? (
           <img 
