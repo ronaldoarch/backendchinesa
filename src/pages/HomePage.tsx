@@ -20,9 +20,19 @@ type Provider = {
 
 type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip";
 
+type Banner = {
+  id: number;
+  title: string;
+  imageUrl: string;
+  linkUrl?: string;
+  position: number;
+  active: boolean;
+};
+
 export function HomePage() {
   const [games, setGames] = useState<Game[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>("popular");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
@@ -43,14 +53,16 @@ export function HomePage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [gamesRes, providersRes] = await Promise.all([
+        const [gamesRes, providersRes, bannersRes] = await Promise.all([
           api.get<Game[]>("/games"),
-          api.get<Provider[]>("/providers")
+          api.get<Provider[]>("/providers"),
+          api.get<Banner[]>("/banners").catch(() => ({ data: [] }))
         ]);
         setGames(gamesRes.data.filter((g) => g.active));
         setProviders(providersRes.data);
+        setBanners(bannersRes.data.filter((b) => b.active));
       } catch (error) {
-        console.error("Erro ao carregar jogos:", error);
+        console.error("Erro ao carregar dados:", error);
       } finally {
         setLoading(false);
       }
@@ -122,15 +134,90 @@ export function HomePage() {
     return filtered;
   }, [games, activeFilter, favorites, providers]);
 
+  const getImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `${api.defaults.baseURL?.replace("/api", "")}${url}`;
+  };
+
+  const activeBanners = banners.filter((b) => b.active).sort((a, b) => a.position - b.position);
+
   return (
     <div className="home-layout">
-      <section className="banner">
-        <div className="banner-content">
-          <span className="badge-gold">Bônus de boas-vindas</span>
-          <h1>Recarregue e ganhe até R$ 7.777</h1>
-          <p>Promoções exclusivas e jackpots progressivos.</p>
-        </div>
-      </section>
+      {activeBanners.length > 0 ? (
+        activeBanners.map((banner) => (
+          <section
+            key={banner.id}
+            className="banner"
+            style={{
+              cursor: banner.linkUrl ? "pointer" : "default"
+            }}
+            onClick={() => {
+              if (banner.linkUrl) {
+                if (banner.linkUrl.startsWith("http")) {
+                  window.open(banner.linkUrl, "_blank");
+                } else {
+                  window.location.href = banner.linkUrl;
+                }
+              }
+            }}
+          >
+            {banner.imageUrl ? (
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "160px",
+                  borderRadius: "16px",
+                  overflow: "hidden"
+                }}
+              >
+                <img
+                  src={getImageUrl(banner.imageUrl) || ""}
+                  alt={banner.title}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover"
+                  }}
+                  onError={(e) => {
+                    // Se a imagem falhar, mostrar conteúdo de texto
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                {banner.title && (
+                  <div
+                    className="banner-content"
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+                      padding: "16px"
+                    }}
+                  >
+                    <h1 style={{ margin: 0, fontSize: "18px" }}>{banner.title}</h1>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="banner-content">
+                <span className="badge-gold">Promoção</span>
+                <h1>{banner.title || "Banner promocional"}</h1>
+              </div>
+            )}
+          </section>
+        ))
+      ) : (
+        <section className="banner">
+          <div className="banner-content">
+            <span className="badge-gold">Bônus de boas-vindas</span>
+            <h1>Recarregue e ganhe até R$ 7.777</h1>
+            <p>Promoções exclusivas e jackpots progressivos.</p>
+          </div>
+        </section>
+      )}
 
       <section className="tabs-row">
         <button
