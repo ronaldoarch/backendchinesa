@@ -439,6 +439,46 @@ body {
   font-size: 12px;
 }
 
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.admin-file-upload {
+  display: inline-block;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px dashed rgba(246, 196, 83, 0.4);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-file-upload:hover {
+  border-color: var(--gold);
+  background: rgba(246, 196, 83, 0.05);
+}
+
+.admin-file-upload input[type="file"] {
+  display: none;
+}
+
+.admin-file-upload:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .checkbox-line {
   display: flex;
   align-items: center;

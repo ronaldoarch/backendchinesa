@@ -12,6 +12,7 @@ import {
   MessageIcon,
   HelpIcon
 } from "./Icons";
+import { DynamicLogo } from "./DynamicLogo";
 
 type Props = {
   open: boolean;
@@ -37,7 +38,11 @@ export function SideMenu({ open, onClose }: Props) {
         }}
       >
         <header className="side-menu-header">
-          <span className="logo-text">BIGBET777</span>
+          <DynamicLogo
+            fallback={<span className="logo-text">BIGBET777</span>}
+            className="logo-image"
+            style={{ maxHeight: "32px", maxWidth: "140px", objectFit: "contain" }}
+          />
         </header>
 
         <nav className="side-menu-section">

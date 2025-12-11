@@ -11,6 +11,9 @@ import { AuthModal } from "./components/AuthModal";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { getUser, removeAuthToken, setUser as saveUserToStorage, api } from "./services/api";
 import { HomeIcon, GiftIcon, CreditCardIcon, HeadphonesIcon, UserIcon } from "./components/Icons";
+import { DynamicFavicon } from "./components/DynamicFavicon";
+import { DynamicLogo } from "./components/DynamicLogo";
+import { LoadingBanner } from "./components/LoadingBanner";
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -112,6 +115,7 @@ export function App() {
 
   return (
     <div className={`app-root${isAdmin ? " app-root-admin" : ""}`}>
+      <DynamicFavicon />
       <header className="top-bar">
         <div className="top-bar-left">
           <button
@@ -121,7 +125,11 @@ export function App() {
           >
             ☰
           </button>
-          <span className="logo-text">BIGBET777</span>
+          <DynamicLogo
+            fallback={<span className="logo-text">BIGBET777</span>}
+            className="logo-image"
+            style={{ maxHeight: "32px", maxWidth: "120px", objectFit: "contain" }}
+          />
         </div>
         <div className="top-bar-right">
           {user && user.username ? (
@@ -207,7 +215,25 @@ export function App() {
       />
 
       <main className="app-main">
-        {!loading && (
+        {loading ? (
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            minHeight: "400px",
+            flexDirection: "column",
+            gap: "16px"
+          }}>
+            <LoadingBanner 
+              style={{ 
+                maxWidth: "200px", 
+                maxHeight: "200px",
+                objectFit: "contain"
+              }} 
+            />
+            <p style={{ color: "var(--text-muted)" }}>Carregando...</p>
+          </div>
+        ) : (
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route
