@@ -32,11 +32,10 @@ try {
   app.use("/uploads", express.static(uploadsDir, {
     setHeaders: (res) => {
       res.set("Cache-Control", "public, max-age=31536000");
-    },
-    fallthrough: false // Não passar para próximo middleware se arquivo não existir
+    }
   }));
   
-  // Middleware para tratar arquivos não encontrados em /uploads
+  // Middleware para tratar arquivos não encontrados em /uploads (após express.static)
   app.use("/uploads", (req, res) => {
     res.status(404).json({ error: "Arquivo não encontrado" });
   });
