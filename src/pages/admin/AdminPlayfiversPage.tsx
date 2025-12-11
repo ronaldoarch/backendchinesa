@@ -80,6 +80,7 @@ export function AdminPlayfiversPage() {
     imageUrl: "",
     active: true
   });
+  const [editingGameId, setEditingGameId] = useState<number | null>(null);
 
   // Função para gerar URL da imagem baseada no padrão PlayFivers
   function generatePlayFiversImageUrl(providerName: string, gameExternalId: string): string {
@@ -441,7 +442,44 @@ export function AdminPlayfiversPage() {
       return;
     }
     try {
-    await api.post("/games", gameForm);
+      if (editingGameId) {
+        // Atualizar jogo existente
+        await api.put(`/games/${editingGameId}`, gameForm);
+        showMessage("success", "Jogo atualizado com sucesso!");
+      } else {
+        // Criar novo jogo
+        await api.post("/games", gameForm);
+        showMessage("success", "Jogo criado com sucesso!");
+      }
+      setGameForm({
+        name: "",
+        externalId: "",
+        providerId: 0,
+        imageUrl: "",
+        active: true
+      });
+      setEditingGameId(null);
+      await loadData();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido";
+      showMessage("error", `Erro ao ${editingGameId ? "atualizar" : "criar"} jogo: ${errorMsg}`);
+    }
+  }
+
+  function handleEditGame(game: Game) {
+    setGameForm({
+      name: game.name,
+      externalId: game.externalId,
+      providerId: game.providerId,
+      imageUrl: game.imageUrl || "",
+      active: game.active
+    });
+    setEditingGameId(game.id || null);
+    // Scroll para o formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
     setGameForm({
       name: "",
       externalId: "",
@@ -449,11 +487,7 @@ export function AdminPlayfiversPage() {
       imageUrl: "",
       active: true
     });
-      showMessage("success", "Jogo criado com sucesso!");
-      await loadData();
-    } catch (error) {
-      showMessage("error", "Erro ao criar jogo");
-    }
+    setEditingGameId(null);
   }
 
   async function handleSyncGame(id: number | undefined) {
@@ -915,7 +949,7 @@ export function AdminPlayfiversPage() {
 
       {/* Jogos Locais */}
       <section className="admin-section">
-        <h2>Jogos (Local) {games.length > 0 && `(${games.length})`}</h2>
+        <h2>{editingGameId ? "Editar Jogo" : "Jogos (Local)"} {games.length > 0 && `(${games.length})`}</h2>
         <form className="admin-form" onSubmit={handleCreateGame}>
           <select
             value={gameForm.providerId}
@@ -947,8 +981,10 @@ export function AdminPlayfiversPage() {
               const externalId = e.target.value;
               setGameForm((g) => {
                 // Gerar URL automaticamente quando o ID externo e o provedor estiverem preenchidos
+                // Mas apenas se não estiver editando ou se a URL estiver vazia
                 const provider = providers.find((p) => p.id === g.providerId);
-                const imageUrl = provider && externalId 
+                const shouldAutoGenerate = !editingGameId || !g.imageUrl;
+                const imageUrl = (provider && externalId && shouldAutoGenerate)
                   ? generatePlayFiversImageUrl(provider.name, externalId)
                   : g.imageUrl || "";
                 return { ...g, externalId, imageUrl };
@@ -989,9 +1025,20 @@ export function AdminPlayfiversPage() {
             />
             Ativo
           </label>
-          <button className="btn btn-gold" type="submit">
-            Adicionar jogo
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button className="btn btn-gold" type="submit">
+              {editingGameId ? "Atualizar Jogo" : "Adicionar Jogo"}
+            </button>
+            {editingGameId && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={handleCancelEdit}
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
         </form>
 
         <table className="admin-table">
@@ -1053,16 +1100,27 @@ export function AdminPlayfiversPage() {
                       <span style={{ color: "#666", fontSize: "12px" }}>Sem imagem</span>
                     )}
                   </td>
-                  <td>{g.active ? "Ativo" : "Inativo"}</td>
-                  <td>
+                <td>{g.active ? "Ativo" : "Inativo"}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => handleEditGame(g)}
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      Editar
+                    </button>
                     <button
                       type="button"
                       className="btn btn-ghost"
                       onClick={() => handleSyncGame(g.id)}
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
                     >
                       Enviar para PlayFivers
                     </button>
-                  </td>
+                  </div>
+                </td>
                 </tr>
               ))
             )}
