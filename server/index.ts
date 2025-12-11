@@ -66,8 +66,8 @@ app.use("/api/playfivers", playfiversRouter);
 
 // Servir index.html para todas as outras rotas (SPA)
 // IMPORTANTE: Esta rota deve vir DEPOIS das rotas de API e /uploads
-app.get("*", (req, res, next) => {
-  // Não interceptar rotas de API ou uploads
+app.get("*", (req, res) => {
+  // Não interceptar rotas de API ou uploads - deixar que express.static trate
   if (req.path.startsWith("/api/") || req.path.startsWith("/uploads")) {
     return res.status(404).json({ error: "Rota não encontrada" });
   }
