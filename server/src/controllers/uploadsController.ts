@@ -9,7 +9,11 @@ export async function uploadFileController(req: Request, res: Response): Promise
   }
 
   // Log detalhado do upload
-  const uploadDir = path.resolve(__dirname, "..", "..", "..", "server", "uploads");
+  // Se __dirname = /app/server/src/controllers, então:
+  // .. = /app/server/src
+  // .. = /app/server
+  // Então precisamos apenas "uploads" (não "server/uploads" novamente)
+  const uploadDir = path.resolve(__dirname, "..", "..", "uploads");
   const filePath = path.join(uploadDir, req.file.filename);
   
   console.log("📤 [UPLOAD] Arquivo recebido:", {

@@ -8,7 +8,11 @@ import { asyncHandler } from "../middleware/asyncHandler";
 export const uploadsRouter = Router();
 
 // IMPORTANTE: Usar o mesmo caminho que server.ts usa para servir arquivos
-const uploadDir = path.resolve(__dirname, "..", "..", "server", "uploads");
+// Se __dirname = /app/server/src/routes, então:
+// .. = /app/server/src
+// .. = /app/server
+// Então precisamos apenas "uploads" (não "server/uploads" novamente)
+const uploadDir = path.resolve(__dirname, "..", "..", "uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

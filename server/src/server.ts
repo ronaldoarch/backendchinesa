@@ -41,8 +41,11 @@ app.use(requestLogger);
 
 // Criar diretório de uploads se não existir
 // IMPORTANTE: Usar o mesmo caminho que routes/uploads.ts usa para salvar arquivos
+// Se __dirname = /app/server/src, então:
+// .. = /app/server
+// Então precisamos apenas "uploads" (não "server/uploads" novamente)
 const fs = require("fs");
-const uploadsDir = path.resolve(__dirname, "..", "..", "server", "uploads");
+const uploadsDir = path.resolve(__dirname, "..", "uploads");
 
 try {
   if (!fs.existsSync(uploadsDir)) {
