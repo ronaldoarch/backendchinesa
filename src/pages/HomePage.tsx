@@ -20,6 +20,61 @@ type Provider = {
 
 type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip";
 
+function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: string; bannerId: number }) {
+  const [imageError, setImageError] = useState(false);
+
+  if (imageError) {
+    return (
+      <div className="banner-content">
+        <span className="badge-gold">Promoção</span>
+        <h1>{title || "Banner promocional"}</h1>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "160px",
+        borderRadius: "16px",
+        overflow: "hidden"
+      }}
+    >
+      <img
+        src={imageUrl || ""}
+        alt={title || "Banner"}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover"
+        }}
+        onError={(e) => {
+          console.error("❌ Erro ao carregar imagem do banner:", imageUrl);
+          console.error("❌ Banner ID:", bannerId, "Title:", title);
+          setImageError(true);
+        }}
+      />
+      {title && (
+        <div
+          className="banner-content"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+            padding: "16px"
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: "18px" }}>{title}</h1>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type Banner = {
   id: number;
   title: string;
@@ -137,7 +192,8 @@ export function HomePage() {
   const getImageUrl = (url: string) => {
     if (!url) return null;
     if (url.startsWith("http")) return url;
-    return `${api.defaults.baseURL?.replace("/api", "")}${url}`;
+    const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
+    return `${baseUrl}${url}`;
   };
 
   const activeBanners = banners.filter((b) => b.active).sort((a, b) => a.position - b.position);
@@ -145,70 +201,41 @@ export function HomePage() {
   return (
     <div className="home-layout">
       {activeBanners.length > 0 ? (
-        activeBanners.map((banner) => (
-          <section
-            key={banner.id}
-            className="banner"
-            style={{
-              cursor: banner.linkUrl ? "pointer" : "default"
-            }}
-            onClick={() => {
-              if (banner.linkUrl) {
-                if (banner.linkUrl.startsWith("http")) {
-                  window.open(banner.linkUrl, "_blank");
-                } else {
-                  window.location.href = banner.linkUrl;
+        activeBanners.map((banner) => {
+          const imageUrl = getImageUrl(banner.imageUrl || "");
+          
+          return (
+            <section
+              key={banner.id}
+              className="banner"
+              style={{
+                cursor: banner.linkUrl ? "pointer" : "default"
+              }}
+              onClick={() => {
+                if (banner.linkUrl) {
+                  if (banner.linkUrl.startsWith("http")) {
+                    window.open(banner.linkUrl, "_blank");
+                  } else {
+                    window.location.href = banner.linkUrl;
+                  }
                 }
-              }
-            }}
-          >
+              }}
+            >
             {banner.imageUrl ? (
-              <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  height: "160px",
-                  borderRadius: "16px",
-                  overflow: "hidden"
-                }}
-              >
-                <img
-                  src={getImageUrl(banner.imageUrl) || ""}
-                  alt={banner.title}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover"
-                  }}
-                  onError={(e) => {
-                    // Se a imagem falhar, mostrar conteúdo de texto
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-                {banner.title && (
-                  <div
-                    className="banner-content"
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
-                      padding: "16px"
-                    }}
-                  >
-                    <h1 style={{ margin: 0, fontSize: "18px" }}>{banner.title}</h1>
-                  </div>
-                )}
-              </div>
+              <BannerImage
+                imageUrl={imageUrl}
+                title={banner.title}
+                bannerId={banner.id}
+              />
             ) : (
               <div className="banner-content">
                 <span className="badge-gold">Promoção</span>
                 <h1>{banner.title || "Banner promocional"}</h1>
               </div>
             )}
-          </section>
-        ))
+            </section>
+          );
+        })
       ) : (
         <section className="banner">
           <div className="banner-content">
