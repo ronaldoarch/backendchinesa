@@ -13,8 +13,8 @@ const gameSchema = z.object({
 
 export async function listGamesController(_req: Request, res: Response): Promise<void> {
   try {
-    const games = await listGames();
-    res.json(games);
+  const games = await listGames();
+  res.json(games);
   } catch (error: any) {
     // eslint-disable-next-line no-console
     console.error("❌ Erro ao listar jogos:", error);

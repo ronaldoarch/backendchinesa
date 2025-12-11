@@ -143,8 +143,8 @@ export function AdminPlayfiversPage() {
         const sRes = await api.get<Settings>("/settings");
         console.log("✅ Settings carregados:", Object.keys(sRes.data || {}));
         const settings = sRes.data || {};
-        setSettingsForm((prev) => ({
-          ...prev,
+      setSettingsForm((prev) => ({
+        ...prev,
           "playfivers.agentId": settings["playfivers.agentId"] ?? "",
           "playfivers.secret": settings["playfivers.secret"] ?? "",
           "playfivers.token": settings["playfivers.token"] ?? "",
@@ -448,16 +448,16 @@ export function AdminPlayfiversPage() {
         showMessage("success", "Jogo atualizado com sucesso!");
       } else {
         // Criar novo jogo
-        await api.post("/games", gameForm);
+    await api.post("/games", gameForm);
         showMessage("success", "Jogo criado com sucesso!");
       }
-      setGameForm({
-        name: "",
-        externalId: "",
-        providerId: 0,
+    setGameForm({
+      name: "",
+      externalId: "",
+      providerId: 0,
         imageUrl: "",
-        active: true
-      });
+      active: true
+    });
       setEditingGameId(null);
       await loadData();
     } catch (error: any) {
@@ -747,12 +747,12 @@ export function AdminPlayfiversPage() {
               </tr>
             ) : (
               providers.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.name}</td>
-                  <td>{p.externalId}</td>
-                  <td>{p.active ? "Ativo" : "Inativo"}</td>
-                </tr>
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.name}</td>
+                <td>{p.externalId}</td>
+                <td>{p.active ? "Ativo" : "Inativo"}</td>
+              </tr>
               ))
             )}
           </tbody>
@@ -906,12 +906,12 @@ export function AdminPlayfiversPage() {
                           }}
                         />
                       )}
-                      <div>
+                    <div>
                         <strong>{name || "Sem nome"}</strong>
-                        <br />
-                        <small style={{ color: "#9b9bb2" }}>
+                      <br />
+                      <small style={{ color: "#9b9bb2" }}>
                           ID: {gameId || "N/A"} | Provider: {providerId || "N/A"}
-                        </small>
+                      </small>
                         {imageUrl && (
                           <>
                             <br />
@@ -1026,9 +1026,9 @@ export function AdminPlayfiversPage() {
             Ativo
           </label>
           <div style={{ display: "flex", gap: "10px" }}>
-            <button className="btn btn-gold" type="submit">
+          <button className="btn btn-gold" type="submit">
               {editingGameId ? "Atualizar Jogo" : "Adicionar Jogo"}
-            </button>
+          </button>
             {editingGameId && (
               <button
                 type="button"
@@ -1062,14 +1062,14 @@ export function AdminPlayfiversPage() {
               </tr>
             ) : (
               games.map((g) => (
-                <tr key={g.id}>
-                  <td>{g.id}</td>
-                  <td>
-                    {providers.find((p) => p.id === g.providerId)?.name ??
-                      g.providerId}
-                  </td>
-                  <td>{g.name}</td>
-                  <td>{g.externalId}</td>
+              <tr key={g.id}>
+                <td>{g.id}</td>
+                <td>
+                  {providers.find((p) => p.id === g.providerId)?.name ??
+                    g.providerId}
+                </td>
+                <td>{g.name}</td>
+                <td>{g.externalId}</td>
                   <td>
                     {g.imageUrl ? (
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1111,17 +1111,17 @@ export function AdminPlayfiversPage() {
                     >
                       Editar
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => handleSyncGame(g.id)}
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => handleSyncGame(g.id)}
                       style={{ fontSize: "11px", padding: "4px 8px" }}
-                    >
-                      Enviar para PlayFivers
-                    </button>
+                  >
+                    Enviar para PlayFivers
+                  </button>
                   </div>
                 </td>
-                </tr>
+              </tr>
               ))
             )}
           </tbody>

@@ -237,13 +237,13 @@ export function HomePage() {
           );
         })
       ) : (
-        <section className="banner">
-          <div className="banner-content">
-            <span className="badge-gold">Bônus de boas-vindas</span>
-            <h1>Recarregue e ganhe até R$ 7.777</h1>
-            <p>Promoções exclusivas e jackpots progressivos.</p>
-          </div>
-        </section>
+      <section className="banner">
+        <div className="banner-content">
+          <span className="badge-gold">Bônus de boas-vindas</span>
+          <h1>Recarregue e ganhe até R$ 7.777</h1>
+          <p>Promoções exclusivas e jackpots progressivos.</p>
+        </div>
+      </section>
       )}
 
       <section className="tabs-row">

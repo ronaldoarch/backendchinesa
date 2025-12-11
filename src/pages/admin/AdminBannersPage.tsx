@@ -54,22 +54,22 @@ export function AdminBannersPage() {
   async function handleCreateBanner(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await api.post("/banners", {
-        title: bannerForm.title,
-        imageUrl: bannerForm.imageUrl,
-        linkUrl: bannerForm.linkUrl || undefined,
-        position: bannerForm.position,
-        active: bannerForm.active
-      });
-      setBannerForm({
-        title: "",
-        imageUrl: "",
-        linkUrl: "",
-        position: 0,
-        active: true
-      });
-      const res = await api.get<Banner[]>("/banners");
-      setBanners(res.data);
+    await api.post("/banners", {
+      title: bannerForm.title,
+      imageUrl: bannerForm.imageUrl,
+      linkUrl: bannerForm.linkUrl || undefined,
+      position: bannerForm.position,
+      active: bannerForm.active
+    });
+    setBannerForm({
+      title: "",
+      imageUrl: "",
+      linkUrl: "",
+      position: 0,
+      active: true
+    });
+    const res = await api.get<Banner[]>("/banners");
+    setBanners(res.data);
       alert("Banner adicionado com sucesso!");
     } catch (error) {
       console.error("Erro ao criar banner:", error);
@@ -81,9 +81,9 @@ export function AdminBannersPage() {
     if (!id) return;
     if (!confirm("Tem certeza que deseja remover este banner?")) return;
     try {
-      await api.delete(`/banners/${id}`);
-      const res = await api.get<Banner[]>("/banners");
-      setBanners(res.data);
+    await api.delete(`/banners/${id}`);
+    const res = await api.get<Banner[]>("/banners");
+    setBanners(res.data);
       alert("Banner removido com sucesso!");
     } catch (error) {
       console.error("Erro ao remover banner:", error);
@@ -121,33 +121,33 @@ export function AdminBannersPage() {
       <form className="admin-form" onSubmit={handleCreateBanner}>
         <div className="admin-form-group">
           <label className="admin-label">Título do Banner</label>
-          <input
+        <input
             placeholder="Ex: Bônus de Boas-Vindas"
-            value={bannerForm.title}
-            onChange={(e) =>
-              setBannerForm((b) => ({ ...b, title: e.target.value }))
-            }
+          value={bannerForm.title}
+          onChange={(e) =>
+            setBannerForm((b) => ({ ...b, title: e.target.value }))
+          }
             required
-          />
+        />
         </div>
 
         <div className="admin-form-group">
           <label className="admin-label">Imagem do Banner</label>
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
-              <input
+        <input
                 placeholder="URL da imagem (ou faça upload abaixo)"
-                value={bannerForm.imageUrl}
-                onChange={(e) =>
-                  setBannerForm((b) => ({ ...b, imageUrl: e.target.value }))
-                }
+          value={bannerForm.imageUrl}
+          onChange={(e) =>
+            setBannerForm((b) => ({ ...b, imageUrl: e.target.value }))
+          }
                 style={{ marginBottom: "8px" }}
                 required
-              />
+        />
               <label className="admin-file-upload">
-                <input
-                  type="file"
-                  accept="image/*"
+        <input
+          type="file"
+          accept="image/*"
                   onChange={(e) => handleFileUpload(e.target.files?.[0])}
                   disabled={uploading}
                 />
@@ -178,8 +178,8 @@ export function AdminBannersPage() {
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
+          }}
+        />
               </div>
             )}
           </div>
@@ -187,29 +187,29 @@ export function AdminBannersPage() {
 
         <div className="admin-form-group">
           <label className="admin-label">URL de Destino (Opcional)</label>
-          <input
+        <input
             placeholder="Ex: /promocoes ou https://..."
-            value={bannerForm.linkUrl}
-            onChange={(e) =>
-              setBannerForm((b) => ({ ...b, linkUrl: e.target.value }))
-            }
-          />
+          value={bannerForm.linkUrl}
+          onChange={(e) =>
+            setBannerForm((b) => ({ ...b, linkUrl: e.target.value }))
+          }
+        />
         </div>
 
         <div className="admin-form-group">
           <label className="admin-label">Posição</label>
-          <input
+        <input
             placeholder="0, 1, 2..."
-            type="number"
-            value={bannerForm.position}
-            onChange={(e) =>
-              setBannerForm((b) => ({
-                ...b,
-                position: Number(e.target.value) || 0
-              }))
-            }
+          type="number"
+          value={bannerForm.position}
+          onChange={(e) =>
+            setBannerForm((b) => ({
+              ...b,
+              position: Number(e.target.value) || 0
+            }))
+          }
             min="0"
-          />
+        />
         </div>
 
         <label className="checkbox-line">
@@ -241,23 +241,23 @@ export function AdminBannersPage() {
             Nenhum banner cadastrado. Adicione um banner acima.
           </p>
         ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Imagem</th>
-                <th>Posição</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {banners.map((b) => (
-                <tr key={b.id}>
-                  <td>{b.id}</td>
-                  <td>{b.title}</td>
-                  <td>
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Imagem</th>
+            <th>Posição</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {banners.map((b) => (
+            <tr key={b.id}>
+              <td>{b.id}</td>
+              <td>{b.title}</td>
+              <td>
                     {b.imageUrl ? (
                       <a
                         href={getImageUrl(b.imageUrl) || b.imageUrl}
@@ -266,12 +266,12 @@ export function AdminBannersPage() {
                         style={{ color: "var(--gold)" }}
                       >
                         Ver imagem
-                      </a>
+                </a>
                     ) : (
                       <span style={{ color: "var(--text-muted)" }}>Sem imagem</span>
                     )}
-                  </td>
-                  <td>{b.position}</td>
+              </td>
+              <td>{b.position}</td>
                   <td>
                     <span
                       style={{
@@ -282,19 +282,19 @@ export function AdminBannersPage() {
                       {b.active ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => handleDeleteBanner(b.id)}
-                    >
-                      Remover
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <td>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => handleDeleteBanner(b.id)}
+                >
+                  Remover
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
         )}
       </div>
     </section>

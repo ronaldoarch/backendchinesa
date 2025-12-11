@@ -1,10 +1,17 @@
 import axios from "axios";
 
-// Usar URL direta do backend (Coolify) ou variável de ambiente
+// Usar URL do backend via env ou, por padrão, o mesmo domínio do frontend
+// Evita redirecionamentos em loop quando a origem é diferente (ex.: mobile + hostinger)
+const defaultApi =
+  typeof window !== "undefined" && window.location.origin
+    ? `${window.location.origin}/api`
+    : "https://g40okoockcoskwwwgc4sowso.agenciamidas.com/api";
+
+// Preferir VITE_API_URL (explícito) ou VITE_API_BASE_URL; cair para defaultApi
 const baseURL =
   (import.meta.env as any).VITE_API_URL ??
   (import.meta.env as any).VITE_API_BASE_URL ??
-  "https://g40okoockcoskwwwgc4sowso.agenciamidas.com/api";
+  defaultApi;
 
 export const api = axios.create({ baseURL });
 
@@ -21,16 +28,28 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url || "";
+
     // Não limpar token em rotas de autenticação (login/register)
-    const isAuthRoute = error.config?.url?.includes("/auth/login") || 
-                        error.config?.url?.includes("/auth/register");
+    const isAuthRoute = url.includes("/auth/login") || url.includes("/auth/register");
     
-    if ((error.response?.status === 401 || error.response?.status === 403) && !isAuthRoute) {
-      // Se não estiver na página de admin, limpar token e redirecionar
-      if (!window.location.pathname.startsWith("/admin")) {
+    // Evitar loop de reload em rotas públicas (settings, games, banners, etc.)
+    const isPublicRoute =
+      url.includes("/settings") ||
+      url.includes("/games") ||
+      url.includes("/banners") ||
+      url.includes("/providers") ||
+      url.includes("/promotions");
+
+    if ((status === 401 || status === 403) && !isAuthRoute) {
+      // Se for rota pública, apenas limpar token e seguir sem redirecionar
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/";
+
+      // Redirecionar somente se estiver no admin (área protegida)
+      if (window.location.pathname.startsWith("/admin")) {
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);

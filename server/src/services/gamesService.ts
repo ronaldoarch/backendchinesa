@@ -28,17 +28,17 @@ export async function listGames(): Promise<Game[]> {
       // eslint-disable-next-line no-console
       console.warn("⚠️ Coluna image_url não existe, buscando sem ela. Execute a migração do banco de dados.");
       try {
-        const [rows] = await pool.query(
-          `SELECT g.id,
-                  g.provider_id as providerId,
-                  g.name,
-                  g.external_id as externalId,
+  const [rows] = await pool.query(
+    `SELECT g.id,
+            g.provider_id as providerId,
+            g.name,
+            g.external_id as externalId,
                   NULL as imageUrl,
-                  g.active
-             FROM games g
-         ORDER BY g.id DESC`
-        );
-        return rows as Game[];
+            g.active
+       FROM games g
+   ORDER BY g.id DESC`
+  );
+  return rows as Game[];
       } catch (fallbackError: any) {
         // eslint-disable-next-line no-console
         console.error("❌ Erro ao buscar jogos (fallback):", fallbackError);

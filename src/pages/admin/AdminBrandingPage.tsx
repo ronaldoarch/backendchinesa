@@ -55,7 +55,7 @@ export function AdminBrandingPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.put("/settings", settingsForm);
+    await api.put("/settings", settingsForm);
       alert("Branding salvo com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar:", error);
@@ -84,21 +84,21 @@ export function AdminBrandingPage() {
           <label className="admin-label">Logo</label>
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
-              <input
+        <input
                 placeholder="URL do logo (ou faça upload abaixo)"
-                value={settingsForm["branding.logoUrl"] ?? ""}
-                onChange={(e) =>
-                  setSettingsForm((s) => ({
-                    ...s,
-                    "branding.logoUrl": e.target.value
-                  }))
-                }
+          value={settingsForm["branding.logoUrl"] ?? ""}
+          onChange={(e) =>
+            setSettingsForm((s) => ({
+              ...s,
+              "branding.logoUrl": e.target.value
+            }))
+          }
                 style={{ marginBottom: "8px" }}
-              />
+        />
               <label className="admin-file-upload">
-                <input
-                  type="file"
-                  accept="image/*"
+        <input
+          type="file"
+          accept="image/*"
                   onChange={(e) =>
                     handleFileUpload(e.target.files?.[0], "branding.logoUrl")
                   }
@@ -133,8 +133,8 @@ export function AdminBrandingPage() {
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
+          }}
+        />
               </div>
             )}
           </div>
@@ -145,20 +145,20 @@ export function AdminBrandingPage() {
           <label className="admin-label">Favicon</label>
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
-              <input
+        <input
                 placeholder="URL do favicon (ou faça upload abaixo)"
-                value={settingsForm["branding.faviconUrl"] ?? ""}
-                onChange={(e) =>
-                  setSettingsForm((s) => ({
-                    ...s,
-                    "branding.faviconUrl": e.target.value
-                  }))
-                }
+          value={settingsForm["branding.faviconUrl"] ?? ""}
+          onChange={(e) =>
+            setSettingsForm((s) => ({
+              ...s,
+              "branding.faviconUrl": e.target.value
+            }))
+          }
                 style={{ marginBottom: "8px" }}
-              />
+        />
               <label className="admin-file-upload">
-                <input
-                  type="file"
+        <input
+          type="file"
                   accept="image/x-icon,image/png,image/svg+xml"
                   onChange={(e) =>
                     handleFileUpload(
@@ -197,8 +197,8 @@ export function AdminBrandingPage() {
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
+          }}
+        />
               </div>
             )}
           </div>
@@ -209,21 +209,21 @@ export function AdminBrandingPage() {
           <label className="admin-label">Banner de Carregamento</label>
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
-              <input
+        <input
                 placeholder="URL do banner de carregamento (ou faça upload abaixo)"
-                value={settingsForm["branding.loadingBannerUrl"] ?? ""}
-                onChange={(e) =>
-                  setSettingsForm((s) => ({
-                    ...s,
-                    "branding.loadingBannerUrl": e.target.value
-                  }))
-                }
+          value={settingsForm["branding.loadingBannerUrl"] ?? ""}
+          onChange={(e) =>
+            setSettingsForm((s) => ({
+              ...s,
+              "branding.loadingBannerUrl": e.target.value
+            }))
+          }
                 style={{ marginBottom: "8px" }}
-              />
+        />
               <label className="admin-file-upload">
-                <input
-                  type="file"
-                  accept="image/*"
+        <input
+          type="file"
+          accept="image/*"
                   onChange={(e) =>
                     handleFileUpload(
                       e.target.files?.[0],
@@ -263,8 +263,8 @@ export function AdminBrandingPage() {
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
+          }}
+        />
               </div>
             )}
           </div>

@@ -174,12 +174,12 @@ async function addAuthToBody(body: Record<string, unknown>): Promise<Record<stri
   // Se usar autenticação no body (padrão PlayFivers) OU se tiver credenciais disponíveis
   const shouldAddToBody = 
     creds.authMethod.toLowerCase() === "agent" || 
-    creds.authMethod.toLowerCase() === "body" || 
-    !creds.authMethod || 
+      creds.authMethod.toLowerCase() === "body" || 
+      !creds.authMethod || 
     creds.authMethod.toLowerCase() === "default" ||
     // Mesmo para Bearer/API Key, tentar adicionar ao body se tiver secretKey
     (creds.agentToken && creds.agentSecret);
-  
+    
   if (shouldAddToBody) {
     // Segundo a documentação: agentToken e secretKey (ou agent_code e agent_secret)
     if (creds.agentToken && creds.agentSecret) {

@@ -123,9 +123,9 @@ apiRouter.use("/games", gamesRouter);
 apiRouter.use("/banners", bannersRouter);
 apiRouter.use("/promotions", promotionsRouter);
 
-// Rotas protegidas (requerem autenticação e admin)
-// GET de settings pode ser acessado por admin autenticado, PUT requer admin
-apiRouter.use("/settings", authenticate, requireAdmin, settingsRouter);
+// Settings: GET público, PUT protegido (proteção aplicada no próprio router)
+apiRouter.use("/settings", settingsRouter);
+// Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);
 

@@ -118,7 +118,7 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
         ) : promotions.length > 0 ? (
           promotions.map((promo) => (
             <article key={promo.id} className="promo-event-card">
-              <div className="promo-event-body">
+            <div className="promo-event-body">
                 <h3>{promo.title}</h3>
                 {promo.subtitle && (
                   <p className="promo-event-subtitle">{promo.subtitle}</p>
@@ -126,8 +126,8 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
                 {promo.description && (
                   <p className="promo-event-desc">{promo.description}</p>
                 )}
-              </div>
-            </article>
+            </div>
+          </article>
           ))
         ) : (
           <div className="promos-empty">
