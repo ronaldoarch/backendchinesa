@@ -175,3 +175,4 @@ Clique em "Configurar na PlayFivers" - usa `PUT /api/v2/agent` com `callback_url
 3. Verificar logs para confirmar que está funcionando
 4. Configurar callback URL
 5. Testar webhooks quando houver transações
+

@@ -110,8 +110,23 @@ export async function launchGameController(req: Request, res: Response): Promise
     return;
   }
 
-  // Obter userId do token se autenticado (opcional)
-  const userId = (req as any).user?.id;
+  // Obter informações do usuário (se autenticado)
+  const authReq = req as any;
+  const userId = authReq.user?.id;
+  const username = authReq.user?.username || authReq.user?.email;
+  
+  // user_code: usar username/email do usuário ou ID como fallback
+  // Se não autenticado, usar um código padrão ou retornar erro
+  const userCode = username || (userId ? `user_${userId}` : null);
+  
+  if (!userCode) {
+    res.status(401).json({ error: "Usuário não autenticado. Faça login para jogar." });
+    return;
+  }
+
+  // Saldo do usuário (por enquanto 0, pode ser buscado do banco depois)
+  // TODO: Buscar saldo real do usuário no banco de dados
+  const userBalance = 0;
 
   const game = await findGameWithProvider(id);
   if (!game) {
@@ -119,16 +134,21 @@ export async function launchGameController(req: Request, res: Response): Promise
     return;
   }
 
-  if (!game.externalId || !game.providerExternalId) {
-    res.status(400).json({ error: "Jogo não possui externalId ou providerExternalId configurado" });
+  if (!game.externalId || !game.providerName) {
+    res.status(400).json({ error: "Jogo não possui externalId ou providerName configurado" });
     return;
   }
 
   try {
+    // Conforme documentação: provider deve ser o NOME do provedor, não o código
     const result = await playFiversService.launchGame(
-      game.providerExternalId,
-      game.externalId,
-      userId
+      game.providerName, // Nome do provedor (ex: "PGSOFT", "PRAGMATIC")
+      game.externalId,   // game_code
+      userCode,          // user_code
+      userBalance,       // user_balance
+      true,              // game_original (assumindo true por padrão)
+      "pt",              // lang (português)
+      undefined          // user_rtp (opcional)
     );
 
     if (!result.success || !result.data?.url) {

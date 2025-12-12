@@ -806,37 +806,63 @@ export const playFiversService = {
   /**
    * Lançar jogo (obter URL do jogo para o usuário jogar)
    * POST /api/v2/game_launch
-   * Retorna URL do jogo que deve ser aberta em nova aba/iframe
+   * Conforme documentação oficial: https://api.playfivers.com/docs
+   * 
+   * Campos obrigatórios:
+   * - agentToken, secretKey (via addAuthToBody)
+   * - user_code: Código do usuário no sistema
+   * - game_code: Código do jogo
+   * - provider: Nome do provedor (não código)
+   * - game_original: boolean
+   * - user_balance: float (saldo do jogador)
+   * - lang: string (pt, es, en, etc.) - opcional, padrão "pt"
+   * - user_rtp: integer - opcional
    */
   async launchGame(
-    providerCode: string,
+    providerName: string, // Nome do provedor (não código)
     gameCode: string,
-    userId?: string | number
+    userCode: string,
+    userBalance: number = 0,
+    gameOriginal: boolean = true,
+    lang: string = "pt",
+    userRtp?: number
   ): Promise<PlayFiversResponse<{ url: string }>> {
     try {
       const client = await createClient();
 
-      // Preparar dados com autenticação
+      // Preparar dados conforme documentação oficial
       const requestData = await addAuthToBody({
-        provider_code: providerCode,
+        user_code: String(userCode),
+        game_code: String(gameCode),
+        provider: String(providerName), // Nome do provedor, não código
+        game_original: Boolean(gameOriginal),
+        user_balance: Number(userBalance),
+        lang: String(lang),
+        ...(userRtp !== undefined && { user_rtp: Number(userRtp) })
+      });
+
+      console.log("🚀 Lançando jogo:", {
+        user_code: userCode,
         game_code: gameCode,
-        ...(userId && { user_id: String(userId) })
+        provider: providerName,
+        user_balance: userBalance
       });
 
       const { data } = await client.post("/api/v2/game_launch", requestData);
       
-      console.log(`✅ Jogo lançado: ${gameCode} do provedor ${providerCode}`);
+      console.log(`✅ Jogo lançado: ${gameCode} do provedor ${providerName}`);
+      console.log("📋 Resposta da PlayFivers:", data);
       
-      // A resposta da PlayFivers geralmente contém uma URL do jogo
-      // Pode estar em data.url, data.game_url, data.launch_url, etc.
-      const gameUrl = data?.url || data?.game_url || data?.launch_url || data?.data?.url;
+      // Conforme documentação, a resposta contém "launch_url"
+      const gameUrl = data?.launch_url || data?.url || data?.game_url || data?.data?.launch_url;
       
       if (!gameUrl) {
-        console.warn("⚠️ Resposta da PlayFivers não contém URL do jogo:", data);
+        console.warn("⚠️ Resposta da PlayFivers não contém launch_url:", data);
         return {
           success: false,
           error: "URL do jogo não encontrada na resposta",
-          message: "A API não retornou a URL do jogo"
+          message: "A API não retornou a launch_url do jogo",
+          data: data
         };
       }
 
@@ -847,6 +873,7 @@ export const playFiversService = {
       };
     } catch (error: any) {
       console.error("❌ Erro ao lançar jogo na PlayFivers:", error.message);
+      console.error("❌ Detalhes do erro:", error.response?.data);
       
       if (error.response?.status === 401 || error.response?.status === 403) {
         return {
@@ -857,16 +884,17 @@ export const playFiversService = {
       }
       
       if (error.response?.status === 422) {
+        const errorMsg = error.response?.data?.msg || error.response?.data?.message || "Game_code incorreto ou corpo inválido";
         return {
           success: false,
-          error: "Game_code ou provider_code incorreto",
-          message: "Verifique se o game_code e provider_code estão corretos"
+          error: errorMsg,
+          message: "Verifique se o game_code, provider e demais campos estão corretos"
         };
       }
 
       return {
         success: false,
-        error: error.response?.data?.message || error.message,
+        error: error.response?.data?.msg || error.response?.data?.message || error.message,
         message: "Erro ao lançar jogo"
       };
     }
