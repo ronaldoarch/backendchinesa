@@ -38,8 +38,20 @@ export function GamePage() {
         }
       } catch (error: any) {
         console.error("Erro ao lançar jogo:", error);
-        const errorMsg = error.response?.data?.error || error.response?.data?.message || "Erro ao abrir o jogo";
-        setError(errorMsg);
+        
+        // Tratar erros específicos
+        if (error.response?.status === 403) {
+          const errorMsg = error.response?.data?.message || error.response?.data?.error || "Saldo insuficiente. Faça um depósito primeiro.";
+          setError(errorMsg);
+        } else if (error.response?.status === 401) {
+          setError("Sessão expirada. Por favor, faça login novamente.");
+          setTimeout(() => navigate("/"), 2000);
+        } else if (error.response?.status === 404) {
+          setError("Jogo não encontrado.");
+        } else {
+          const errorMsg = error.response?.data?.error || error.response?.data?.message || "Erro ao abrir o jogo. Tente novamente.";
+          setError(errorMsg);
+        }
       } finally {
         setLoading(false);
       }
