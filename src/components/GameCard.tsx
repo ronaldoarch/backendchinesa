@@ -40,7 +40,7 @@ export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false
     <article 
       className="game-card"
       onClick={handlePlayClick}
-      style={{ cursor: gameId ? (loading ? "wait" : "pointer") : "default" }}
+      style={{ cursor: gameId ? "pointer" : "default" }}
     >
       <div className="game-card-thumbnail" style={{ position: "relative" }}>
         {imageUrl ? (
