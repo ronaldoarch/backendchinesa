@@ -1,4 +1,4 @@
-import mysql from "mysql2/promise";
+import mysql, { RowDataPacket } from "mysql2/promise";
 import { env } from "./env";
 
 const dbConfig = {
@@ -85,6 +85,7 @@ export async function initDb() {
         password_hash VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         currency VARCHAR(10) DEFAULT 'BRL',
+        balance DECIMAL(10, 2) DEFAULT 0.00,
         is_admin BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -92,6 +93,29 @@ export async function initDb() {
         INDEX idx_is_admin (is_admin)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Adicionar coluna balance se não existir (migração)
+    try {
+      const [balanceColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'balance'`
+      );
+      
+      if (!balanceColumns || balanceColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN balance DECIMAL(10, 2) DEFAULT 0.00
+        `);
+        // eslint-disable-next-line no-console
+        console.log("✅ Coluna balance adicionada à tabela users");
+      }
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.warn("⚠️ Aviso ao verificar/adicionar coluna balance:", error.message);
+    }
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS promotions (

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { createGame, findGameWithProvider, listGames, updateGame } from "../services/gamesService";
 import { playFiversService } from "../services/playfivers-v2";
+import { findUserById } from "../services/authService";
 
 const gameSchema = z.object({
   providerId: z.number(),
@@ -113,20 +114,26 @@ export async function launchGameController(req: Request, res: Response): Promise
   // Obter informações do usuário (autenticação já validada pelo middleware)
   const authReq = req as any;
   const userId = authReq.userId;
-  const username = authReq.user?.username || authReq.user?.email;
   
-  // user_code: usar username/email do usuário ou ID como fallback
-  // Conforme documentação PlayFivers, user_code deve ser uma string identificando o usuário
-  const userCode = username || (userId ? `user_${userId}` : `user_${userId}`);
-  
-  if (!userCode) {
-    res.status(401).json({ error: "Usuário não autenticado. Faça login para jogar." });
+  // Buscar dados completos do usuário no banco (incluindo saldo)
+  const user = await findUserById(userId);
+  if (!user) {
+    res.status(404).json({ error: "Usuário não encontrado" });
     return;
   }
 
-  // Saldo do usuário (por enquanto 0, pode ser buscado do banco depois)
-  // TODO: Buscar saldo real do usuário no banco de dados
-  const userBalance = 0;
+  // Validar saldo: usuário precisa ter saldo > 0 para jogar
+  const userBalance = Number(user.balance || 0);
+  if (userBalance <= 0) {
+    res.status(403).json({ 
+      error: "Saldo insuficiente", 
+      message: "Você precisa ter saldo para jogar. Faça um depósito primeiro." 
+    });
+    return;
+  }
+
+  // user_code: usar username do usuário
+  const userCode = user.username;
 
   const game = await findGameWithProvider(id);
   if (!game) {
@@ -145,7 +152,7 @@ export async function launchGameController(req: Request, res: Response): Promise
       game.providerName, // Nome do provedor (ex: "PGSOFT", "PRAGMATIC")
       game.externalId,   // game_code
       userCode,          // user_code
-      userBalance,       // user_balance
+      userBalance,       // user_balance (saldo real do usuário)
       true,              // game_original (assumindo true por padrão)
       "pt",              // lang (português)
       undefined          // user_rtp (opcional)

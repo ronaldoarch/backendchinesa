@@ -6,6 +6,7 @@ import { PromotionsPage } from "./pages/PromotionsPage";
 import { DepositPage } from "./pages/DepositPage";
 import { SupportPage } from "./pages/SupportPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { GamePage } from "./pages/GamePage";
 import { SideMenu } from "./components/SideMenu";
 import { AuthModal } from "./components/AuthModal";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -252,6 +253,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/jogo/:id"
+              element={
+                <ProtectedRoute>
+                  <GamePage />
                 </ProtectedRoute>
               }
             />

@@ -1,6 +1,6 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { HeartIcon } from "./Icons";
-import { api } from "../services/api";
 
 type Props = {
   title: string;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false, onToggleFavorite }: Props) {
-  const [loading, setLoading] = React.useState(false);
+  const navigate = useNavigate();
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -21,26 +21,19 @@ export function GameCard({ title, provider, gameId, imageUrl, isFavorite = false
     }
   };
 
-  const handlePlayClick = async (e: React.MouseEvent) => {
+  const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!gameId) return;
 
-    setLoading(true);
-    try {
-      const response = await api.post<{ url: string }>(`/games/${gameId}/launch`);
-      if (response.data?.url) {
-        // Abrir jogo em nova aba
-        window.open(response.data.url, "_blank", "noopener,noreferrer");
-      } else {
-        alert("Erro: URL do jogo não retornada pela API");
-      }
-    } catch (error: any) {
-      console.error("Erro ao lançar jogo:", error);
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Erro ao abrir o jogo";
-      alert(`Erro ao abrir o jogo: ${errorMsg}`);
-    } finally {
-      setLoading(false);
+    // Verificar se usuário está autenticado
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Você precisa estar logado para jogar");
+      return;
     }
+
+    // Navegar para a página do jogo
+    navigate(`/jogo/${gameId}`);
   };
 
   return (

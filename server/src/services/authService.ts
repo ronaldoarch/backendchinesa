@@ -9,6 +9,7 @@ export type User = {
   username: string;
   phone?: string;
   currency: string;
+  balance?: number;
   is_admin: boolean;
   created_at: Date;
 };
@@ -65,7 +66,7 @@ export async function findUserByUsername(username: string): Promise<UserWithPass
 
 export async function findUserById(id: number): Promise<User | null> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    "SELECT id, username, phone, currency, is_admin, created_at FROM users WHERE id = ?",
+    "SELECT id, username, phone, currency, COALESCE(balance, 0) as balance, is_admin, created_at FROM users WHERE id = ?",
     [id]
   );
 
@@ -77,6 +78,7 @@ export async function findUserById(id: number): Promise<User | null> {
   // Garantir que is_admin seja boolean (MySQL pode retornar 0/1)
   return {
     ...row,
+    balance: Number(row.balance || 0),
     is_admin: Boolean(row.is_admin === 1 || row.is_admin === true)
   } as User;
 }
