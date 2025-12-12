@@ -115,19 +115,26 @@ export async function launchGameController(req: Request, res: Response): Promise
   const authReq = req as any;
   const userId = authReq.userId;
   
+  console.log("🎮 [LAUNCH GAME] Usuário tentando lançar jogo:", { userId, gameId: id });
+  
   // Buscar dados completos do usuário no banco (incluindo saldo)
   const user = await findUserById(userId);
   if (!user) {
+    console.error("❌ [LAUNCH GAME] Usuário não encontrado:", userId);
     res.status(404).json({ error: "Usuário não encontrado" });
     return;
   }
 
   // Validar saldo: usuário precisa ter saldo > 0 para jogar
   const userBalance = Number(user.balance || 0);
+  console.log("💰 [LAUNCH GAME] Saldo do usuário:", { userId, username: user.username, balance: userBalance });
+  
   if (userBalance <= 0) {
+    console.warn("⚠️ [LAUNCH GAME] Saldo insuficiente:", { userId, balance: userBalance });
     res.status(403).json({ 
       error: "Saldo insuficiente", 
-      message: "Você precisa ter saldo para jogar. Faça um depósito primeiro." 
+      message: "Você precisa ter saldo para jogar. Faça um depósito primeiro.",
+      balance: userBalance
     });
     return;
   }
