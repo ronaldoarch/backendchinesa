@@ -7,6 +7,7 @@ import { AdminBannersPage } from "./admin/AdminBannersPage";
 import { AdminUsersPage } from "./admin/AdminUsersPage";
 import { AdminDepositsPage } from "./admin/AdminDepositsPage";
 import { AdminPromotionsPage } from "./admin/AdminPromotionsPage";
+import { AdminSuitPayPage } from "./admin/AdminSuitPayPage";
 
 export function AdminPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -88,6 +89,15 @@ export function AdminPage() {
           >
             Promoções
           </NavLink>
+          <NavLink
+            to="/admin/suitpay"
+            className={({ isActive }) =>
+              `admin-menu-item${isActive ? " active" : ""}`
+            }
+            onClick={() => setMenuOpen(false)}
+          >
+            SuitPay
+          </NavLink>
         </nav>
       </aside>
 
@@ -100,6 +110,7 @@ export function AdminPage() {
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="depositos" element={<AdminDepositsPage />} />
           <Route path="promocoes" element={<AdminPromotionsPage />} />
+          <Route path="suitpay" element={<AdminSuitPayPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </div>

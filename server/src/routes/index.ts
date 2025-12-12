@@ -7,6 +7,7 @@ import { uploadsRouter } from "./uploads";
 import { playfiversRouter } from "./playfivers";
 import { authRouter } from "./auth";
 import { promotionsRouter } from "./promotions";
+import { paymentsRouter } from "./payments";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -125,6 +126,8 @@ apiRouter.use("/promotions", promotionsRouter);
 
 // Settings: GET público, PUT protegido (proteção aplicada no próprio router)
 apiRouter.use("/settings", settingsRouter);
+// Pagamentos (proteção aplicada no próprio router)
+apiRouter.use("/payments", paymentsRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);

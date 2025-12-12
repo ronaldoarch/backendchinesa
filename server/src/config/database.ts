@@ -118,6 +118,32 @@ export async function initDb() {
     }
 
     await connection.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        request_number VARCHAR(255) UNIQUE NOT NULL,
+        transaction_id VARCHAR(255),
+        payment_method ENUM('PIX', 'CARD', 'BOLETO') NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'PENDING',
+        qr_code TEXT,
+        qr_code_base64 TEXT,
+        barcode VARCHAR(255),
+        digitable_line VARCHAR(255),
+        due_date DATE,
+        callback_url TEXT,
+        metadata JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_request_number (request_number),
+        INDEX idx_status (status),
+        INDEX idx_payment_method (payment_method)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS promotions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
