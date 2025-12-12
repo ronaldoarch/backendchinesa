@@ -23,7 +23,7 @@ type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip";
 function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: string; bannerId: number }) {
   const [imageError, setImageError] = useState(false);
 
-  if (imageError) {
+  if (imageError || !imageUrl) {
     return (
       <div className="banner-content">
         <span className="badge-gold">Promoção</span>
@@ -51,8 +51,11 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
           objectFit: "cover"
         }}
         onError={(e) => {
-          console.error("❌ Erro ao carregar imagem do banner:", imageUrl);
-          console.error("❌ Banner ID:", bannerId, "Title:", title);
+          // Silenciar erro 404 - arquivo não existe, mas já temos fallback
+          // Apenas logar em modo debug se necessário
+          if (process.env.NODE_ENV === "development") {
+            console.warn("⚠️ Imagem do banner não encontrada (404 esperado):", imageUrl);
+          }
           setImageError(true);
         }}
       />
