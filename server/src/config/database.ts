@@ -22,7 +22,9 @@ console.log("🔌 Configurando conexão MySQL:", {
   hasPassword: !!env.dbPassword
 });
 
-// Testar conexão ao inicializar
+export const pool = mysql.createPool(dbConfig);
+
+// Testar conexão ao inicializar (após criar o pool)
 pool.getConnection()
   .then((connection) => {
     console.log("✅ Conexão MySQL estabelecida com sucesso!");
@@ -31,8 +33,6 @@ pool.getConnection()
   .catch((error) => {
     console.error("❌ Erro ao conectar ao MySQL:", error.message);
   });
-
-export const pool = mysql.createPool(dbConfig);
 
 export async function initDb() {
   const connection = await pool.getConnection();
