@@ -10,8 +10,7 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  connectTimeout: 30000, // 30 segundos de timeout
-  acquireTimeout: 30000
+  connectTimeout: 30000 // 30 segundos de timeout
 };
 
 // Log da configuração (sem senha)
