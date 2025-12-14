@@ -9,8 +9,19 @@ const dbConfig = {
   database: env.dbName,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  connectTimeout: 30000, // 30 segundos de timeout
+  acquireTimeout: 30000
 };
+
+// Log da configuração (sem senha)
+console.log("🔌 Configurando conexão MySQL:", {
+  host: env.dbHost,
+  port: env.dbPort,
+  user: env.dbUser,
+  database: env.dbName,
+  hasPassword: !!env.dbPassword
+});
 
 export const pool = mysql.createPool(dbConfig);
 
