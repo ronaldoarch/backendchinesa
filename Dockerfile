@@ -9,7 +9,7 @@ RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 
 # Instalar dependências
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copiar código (usando .dockerignore para excluir arquivos desnecessários)
 COPY . .
