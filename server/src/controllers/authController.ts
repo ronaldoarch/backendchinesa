@@ -30,11 +30,18 @@ export async function registerController(req: Request, res: Response): Promise<v
   const { username, password, phone, currency } = parsed.data;
 
   // Verificar se usu?rio j? existe
+  console.log("🔍 [REGISTER] Verificando se usuário já existe:", username);
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
+    console.log("⚠️ [REGISTER] Usuário já existe:", {
+      id: existingUser.id,
+      username: existingUser.username,
+      created_at: existingUser.created_at
+    });
     res.status(400).json({ error: "Nome de usu?rio j? est? em uso" });
     return;
   }
+  console.log("✅ [REGISTER] Usuário não existe, pode criar");
 
   try {
     console.log("📝 [REGISTER] Tentando criar usuário:", { username, hasPhone: !!phone, currency });

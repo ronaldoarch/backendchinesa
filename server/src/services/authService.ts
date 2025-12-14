@@ -73,21 +73,49 @@ export async function createUser(
 }
 
 export async function findUserByUsername(username: string): Promise<UserWithPassword | null> {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    "SELECT id, username, password_hash, phone, currency, is_admin, created_at FROM users WHERE username = ?",
-    [username]
-  );
+  console.log("🔍 [FIND_USER] Buscando usuário:", username);
+  
+  try {
+    // Verificar qual banco está sendo usado
+    const [dbInfo] = await pool.query<RowDataPacket[]>("SELECT DATABASE() as db");
+    console.log("🔍 [FIND_USER] Banco de dados atual:", dbInfo[0]?.db);
+    
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT id, username, password_hash, phone, currency, is_admin, created_at FROM users WHERE username = ?",
+      [username]
+    );
 
-  if (rows.length === 0) {
-    return null;
+    console.log("🔍 [FIND_USER] Resultado da busca:", {
+      username,
+      encontrados: rows.length,
+      ids: rows.map((r: any) => r.id)
+    });
+
+    if (rows.length === 0) {
+      console.log("✅ [FIND_USER] Usuário não encontrado:", username);
+      return null;
+    }
+
+    const row = rows[0];
+    console.log("⚠️ [FIND_USER] Usuário encontrado:", {
+      id: row.id,
+      username: row.username,
+      created_at: row.created_at
+    });
+    
+    // Garantir que is_admin seja boolean (MySQL pode retornar 0/1)
+    return {
+      ...row,
+      is_admin: Boolean(row.is_admin === 1 || row.is_admin === true)
+    } as UserWithPassword;
+  } catch (error: any) {
+    console.error("❌ [FIND_USER] Erro ao buscar usuário:", {
+      username,
+      error: error.message,
+      code: error.code
+    });
+    throw error;
   }
-
-  const row = rows[0];
-  // Garantir que is_admin seja boolean (MySQL pode retornar 0/1)
-  return {
-    ...row,
-    is_admin: Boolean(row.is_admin === 1 || row.is_admin === true)
-  } as UserWithPassword;
 }
 
 export async function findUserById(id: number): Promise<User | null> {
