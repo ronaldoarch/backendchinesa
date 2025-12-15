@@ -1,21 +1,16 @@
 import axios from "axios";
 
 // Usar URL do backend via env ou fallback para o backend real
-// IMPORTANTE: Se o frontend estiver no Hostinger e o backend em outro domínio,
-// configure VITE_API_URL durante o build ou use o fallback abaixo
-const backendUrl = "https://g40okoockcoskwwwgc4sowso.agenciamidas.com/api";
+// IMPORTANTE: Como o proxy do .htaccess não está funcionando no Hostinger (503),
+// vamos usar a URL direta do backend no Coolify
+const backendUrl = "https://r404c0kskws08wccgw08kk4k.agenciamidas.com/api";
 
-const defaultApi =
-  typeof window !== "undefined" && window.location.origin
-    ? `${window.location.origin}/api`
-    : backendUrl;
-
-// Preferir VITE_API_URL (explícito) ou VITE_API_BASE_URL; cair para defaultApi
-// Se não houver env configurado, usar o backendUrl diretamente (backend em domínio diferente)
+// Preferir VITE_API_URL (explícito) ou VITE_API_BASE_URL; depois usar backendUrl diretamente
+// Não usar proxy do .htaccess pois está retornando 503 no Hostinger
 const baseURL =
   (import.meta.env as any).VITE_API_URL ??
   (import.meta.env as any).VITE_API_BASE_URL ??
-  backendUrl; // Usar backendUrl diretamente ao invés de defaultApi para evitar chamadas ao domínio errado
+  backendUrl; // Usar URL direta do backend (proxy não funciona no Hostinger)
 
 export const api = axios.create({ baseURL });
 

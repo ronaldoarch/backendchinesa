@@ -2,7 +2,7 @@
 
 Backend completo para plataforma de cassino online com integração PlayFivers.
 
-**Repositório GitHub:** https://github.com/ronaldoarch/backendchinesa.git
+**Repositório GitHub:** https://github.com/ronaldoarch/backendchiinesa2.git
 
 ---
 
@@ -19,8 +19,8 @@ Frontend (Hostinger) → Backend (VPS) → Banco (Railway PostgreSQL)
 ### 1. Clonar repositório
 
 ```bash
-git clone https://github.com/ronaldoarch/backendchinesa.git
-cd backendchinesa
+git clone https://github.com/ronaldoarch/backendchiinesa2.git
+cd backendchiinesa2
 ```
 
 ### 2. Instalar dependências
@@ -175,7 +175,7 @@ Use o arquivo `database.sql` para criar as tabelas.
 
 ```bash
 # Na VPS
-cd ~/backendchinesa
+cd ~/backendchiinesa2
 git pull
 pm2 restart cassino-api
 ```

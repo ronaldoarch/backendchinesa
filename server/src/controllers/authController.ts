@@ -5,7 +5,9 @@ import {
   findUserByUsername,
   verifyPassword,
   generateToken,
-  findUserById
+  findUserById,
+  updateUserProfile,
+  updateUserPassword
 } from "../services/authService";
 
 const registerSchema = z.object({
@@ -30,15 +32,26 @@ export async function registerController(req: Request, res: Response): Promise<v
   const { username, password, phone, currency } = parsed.data;
 
   // Verificar se usu?rio j? existe
+  console.log("🔍 [REGISTER] Verificando se usuário já existe:", username);
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
+    console.log("⚠️ [REGISTER] Usuário já existe:", {
+      id: existingUser.id,
+      username: existingUser.username,
+      created_at: existingUser.created_at
+    });
     res.status(400).json({ error: "Nome de usu?rio j? est? em uso" });
     return;
   }
+  console.log("✅ [REGISTER] Usuário não existe, pode criar");
 
   try {
+    console.log("📝 [REGISTER] Tentando criar usuário:", { username, hasPhone: !!phone, currency });
     const user = await createUser(username, password, phone, currency);
+    console.log("✅ [REGISTER] Usuário criado:", { id: user.id, username: user.username });
+    
     const token = generateToken(user);
+    console.log("🔑 [REGISTER] Token gerado");
 
     res.status(201).json({
       user: {
@@ -50,10 +63,20 @@ export async function registerController(req: Request, res: Response): Promise<v
       },
       token
     });
-  } catch (error) {
+    console.log("✅ [REGISTER] Resposta enviada com sucesso");
+  } catch (error: any) {
     // eslint-disable-next-line no-console
-    console.error("Erro ao criar usu?rio:", error);
-    res.status(500).json({ error: "Erro ao criar usu?rio" });
+    console.error("❌ [REGISTER] Erro ao criar usuário:", {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: "Erro ao criar usuário",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
   }
 }
 
@@ -140,13 +163,13 @@ export async function meController(req: Request, res: Response): Promise<void> {
   const userId = (req as any).userId;
   
   if (!userId) {
-    res.status(401).json({ error: "N?o autenticado" });
+    res.status(401).json({ error: "Não autenticado" });
     return;
   }
 
   const user = await findUserById(userId);
   if (!user) {
-    res.status(404).json({ error: "Usu?rio n?o encontrado" });
+    res.status(404).json({ error: "Usuário não encontrado" });
     return;
   }
 
@@ -154,7 +177,103 @@ export async function meController(req: Request, res: Response): Promise<void> {
     id: user.id,
     username: user.username,
     phone: user.phone,
+    email: user.email,
+    document: user.document,
     currency: user.currency,
+    balance: user.balance || 0,
     is_admin: user.is_admin
   });
+}
+
+const updateProfileSchema = z.object({
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  document: z.string().optional()
+});
+
+export async function updateProfileController(req: Request, res: Response): Promise<void> {
+  const userId = (req as any).userId;
+  
+  if (!userId) {
+    res.status(401).json({ error: "Não autenticado" });
+    return;
+  }
+
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    // Converter strings vazias em null
+    const updateData: { phone?: string; email?: string; document?: string } = {};
+    if (parsed.data.phone !== undefined) {
+      updateData.phone = parsed.data.phone || undefined;
+    }
+    if (parsed.data.email !== undefined) {
+      updateData.email = parsed.data.email || undefined;
+    }
+    if (parsed.data.document !== undefined) {
+      updateData.document = parsed.data.document || undefined;
+    }
+
+    const updatedUser = await updateUserProfile(userId, updateData);
+    if (!updatedUser) {
+      res.status(404).json({ error: "Usuário não encontrado" });
+      return;
+    }
+
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      phone: updatedUser.phone,
+      email: updatedUser.email,
+      document: updatedUser.document,
+      currency: updatedUser.currency,
+      balance: updatedUser.balance || 0,
+      is_admin: updatedUser.is_admin
+    });
+  } catch (error: any) {
+    console.error("Erro ao atualizar perfil:", error);
+    res.status(500).json({ error: error.message || "Erro ao atualizar perfil" });
+  }
+}
+
+const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6)
+});
+
+export async function updatePasswordController(req: Request, res: Response): Promise<void> {
+  const userId = (req as any).userId;
+  
+  if (!userId) {
+    res.status(401).json({ error: "Não autenticado" });
+    return;
+  }
+
+  const parsed = updatePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const success = await updateUserPassword(
+      userId,
+      parsed.data.currentPassword,
+      parsed.data.newPassword
+    );
+
+    if (!success) {
+      res.status(400).json({ error: "Senha atual incorreta" });
+      return;
+    }
+
+    res.json({ message: "Senha atualizada com sucesso" });
+  } catch (error: any) {
+    console.error("Erro ao atualizar senha:", error);
+    res.status(500).json({ error: error.message || "Erro ao atualizar senha" });
+  }
 }

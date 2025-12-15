@@ -9,10 +9,30 @@ const dbConfig = {
   database: env.dbName,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  connectTimeout: 30000 // 30 segundos de timeout
 };
 
+// Log da configuração (sem senha)
+console.log("🔌 Configurando conexão MySQL:", {
+  host: env.dbHost,
+  port: env.dbPort,
+  user: env.dbUser,
+  database: env.dbName,
+  hasPassword: !!env.dbPassword
+});
+
 export const pool = mysql.createPool(dbConfig);
+
+// Testar conexão ao inicializar (após criar o pool)
+pool.getConnection()
+  .then((connection) => {
+    console.log("✅ Conexão MySQL estabelecida com sucesso!");
+    connection.release();
+  })
+  .catch((error) => {
+    console.error("❌ Erro ao conectar ao MySQL:", error.message);
+  });
 
 export async function initDb() {
   const connection = await pool.getConnection();
@@ -115,6 +135,51 @@ export async function initDb() {
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.warn("⚠️ Aviso ao verificar/adicionar coluna balance:", error.message);
+    }
+
+    // Adicionar colunas email e document se não existirem (migração)
+    try {
+      const [emailColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'email'`
+      );
+      
+      if (!emailColumns || emailColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN email VARCHAR(255) NULL
+        `);
+        // eslint-disable-next-line no-console
+        console.log("✅ Coluna email adicionada à tabela users");
+      }
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.warn("⚠️ Aviso ao verificar/adicionar coluna email:", error.message);
+    }
+
+    try {
+      const [documentColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'document'`
+      );
+      
+      if (!documentColumns || documentColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN document VARCHAR(20) NULL
+        `);
+        // eslint-disable-next-line no-console
+        console.log("✅ Coluna document adicionada à tabela users");
+      }
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.warn("⚠️ Aviso ao verificar/adicionar coluna document:", error.message);
     }
 
     await connection.query(`

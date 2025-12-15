@@ -7,13 +7,13 @@
   RewriteCond %{HTTPS} off
   RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # Proxy para API Node.js (ajuste a porta se necessário)
+  # Proxy para API Node.js (Backend no Coolify)
   RewriteCond %{REQUEST_URI} ^/api
-  RewriteRule ^api/(.*)$ http://localhost:4000/api/$1 [P,L]
+  RewriteRule ^api/(.*)$ https://r404c0kskws08wccgw08kk4k.agenciamidas.com/api/$1 [P,L]
   
-  # Proxy para uploads
+  # Proxy para uploads (Backend no Coolify)
   RewriteCond %{REQUEST_URI} ^/uploads
-  RewriteRule ^uploads/(.*)$ http://localhost:4000/uploads/$1 [P,L]
+  RewriteRule ^uploads/(.*)$ https://r404c0kskws08wccgw08kk4k.agenciamidas.com/uploads/$1 [P,L]
 
   # Frontend - React Router (SPA)
   RewriteCond %{REQUEST_FILENAME} !-f
