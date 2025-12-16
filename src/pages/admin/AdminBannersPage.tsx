@@ -31,10 +31,27 @@ export function AdminBannersPage() {
   async function uploadFile(file: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await api.post<{ url: string }>("/uploads", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
-    return res.data.url;
+    
+    try {
+      console.log("📤 [UPLOAD] Enviando arquivo:", {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      const res = await api.post<{ url: string }>("/uploads", formData, {
+        headers: { 
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      
+      console.log("✅ [UPLOAD] Upload bem-sucedido:", res.data.url);
+      return res.data.url;
+    } catch (error: any) {
+      console.error("❌ [UPLOAD] Erro ao fazer upload:", error);
+      console.error("❌ [UPLOAD] Resposta:", error.response?.data);
+      throw error;
+    }
   }
 
   async function handleFileUpload(file: File | undefined) {

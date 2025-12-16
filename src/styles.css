@@ -529,6 +529,32 @@ body {
   margin-top: 10px;
 }
 
+/* Responsividade para dashboard admin */
+@media (max-width: 768px) {
+  .app-root-admin .admin-dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .app-root-admin .admin-card {
+    padding: 8px 10px;
+  }
+  
+  .app-root-admin .admin-card-value {
+    font-size: 14px;
+  }
+  
+  .app-root-admin .admin-card-label {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-root-admin .admin-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-card {
   background: #111119;
   border-radius: 12px;

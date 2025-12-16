@@ -222,45 +222,160 @@ export function HomePage() {
   };
 
   const activeBanners = banners.filter((b) => b.active).sort((a, b) => a.position - b.position);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+  // Auto-rotacionar banners a cada 5 segundos
+  useEffect(() => {
+    if (activeBanners.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % activeBanners.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeBanners.length]);
+
+  const currentBanner = activeBanners[currentBannerIndex];
 
   return (
     <div className="home-layout">
       {activeBanners.length > 0 ? (
-        activeBanners.map((banner) => {
-          const imageUrl = getImageUrl(banner.imageUrl || "");
+        <section
+          className="banner"
+          style={{
+            cursor: currentBanner?.linkUrl ? "pointer" : "default",
+            position: "relative"
+          }}
+          onClick={() => {
+            if (currentBanner?.linkUrl) {
+              if (currentBanner.linkUrl.startsWith("http")) {
+                window.open(currentBanner.linkUrl, "_blank");
+              } else {
+                window.location.href = currentBanner.linkUrl;
+              }
+            }
+          }}
+        >
+          {currentBanner?.imageUrl ? (
+            <BannerImage
+              imageUrl={getImageUrl(currentBanner.imageUrl || "")}
+              title={currentBanner.title}
+              bannerId={currentBanner.id}
+            />
+          ) : (
+            <div className="banner-content">
+              <span className="badge-gold">Promoção</span>
+              <h1>{currentBanner?.title || "Banner promocional"}</h1>
+            </div>
+          )}
           
-          return (
-            <section
-              key={banner.id}
-              className="banner"
-              style={{
-                cursor: banner.linkUrl ? "pointer" : "default"
-              }}
-              onClick={() => {
-                if (banner.linkUrl) {
-                  if (banner.linkUrl.startsWith("http")) {
-                    window.open(banner.linkUrl, "_blank");
-                  } else {
-                    window.location.href = banner.linkUrl;
-                  }
-                }
-              }}
-            >
-            {banner.imageUrl ? (
-              <BannerImage
-                imageUrl={imageUrl}
-                title={banner.title}
-                bannerId={banner.id}
-              />
-            ) : (
-              <div className="banner-content">
-                <span className="badge-gold">Promoção</span>
-                <h1>{banner.title || "Banner promocional"}</h1>
-              </div>
-            )}
-            </section>
-          );
-        })
+          {/* Indicadores de carrossel */}
+          {activeBanners.length > 1 && (
+            <div style={{
+              position: "absolute",
+              bottom: "16px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              display: "flex",
+              gap: "8px",
+              zIndex: 10
+            }}>
+              {activeBanners.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentBannerIndex(index);
+                  }}
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    border: "none",
+                    background: index === currentBannerIndex ? "var(--gold)" : "rgba(255, 255, 255, 0.3)",
+                    cursor: "pointer",
+                    transition: "background 0.3s"
+                  }}
+                  aria-label={`Banner ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Botões de navegação */}
+          {activeBanners.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentBannerIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length);
+                }}
+                style={{
+                  position: "absolute",
+                  left: "16px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(0, 0, 0, 0.5)",
+                  border: "1px solid rgba(246, 196, 83, 0.3)",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  color: "var(--gold)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  zIndex: 10,
+                  transition: "background 0.3s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.7)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.5)";
+                }}
+                aria-label="Banner anterior"
+              >
+                ‹
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentBannerIndex((prev) => (prev + 1) % activeBanners.length);
+                }}
+                style={{
+                  position: "absolute",
+                  right: "16px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(0, 0, 0, 0.5)",
+                  border: "1px solid rgba(246, 196, 83, 0.3)",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  color: "var(--gold)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  zIndex: 10,
+                  transition: "background 0.3s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.7)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(0, 0, 0, 0.5)";
+                }}
+                aria-label="Próximo banner"
+              >
+                ›
+              </button>
+            </>
+          )}
+        </section>
       ) : (
       <section className="banner">
         <div className="banner-content">

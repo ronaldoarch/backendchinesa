@@ -34,7 +34,35 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  },
+  fileFilter: (_req, file, cb) => {
+    // Aceitar apenas imagens
+    const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Tipo de arquivo não permitido. Apenas imagens são aceitas."));
+    }
+  }
+});
 
-uploadsRouter.post("/", upload.single("file"), asyncHandler(uploadFileController));
+// Middleware de erro do multer
+const uploadMiddleware = (req: any, res: any, next: any) => {
+  upload.single("file")(req, res, (err: any) => {
+    if (err) {
+      console.error("❌ [UPLOAD] Erro no multer:", err.message);
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: "Arquivo muito grande. Tamanho máximo: 10MB" });
+      }
+      return res.status(400).json({ error: "Erro ao fazer upload", message: err.message });
+    }
+    next();
+  });
+};
+
+uploadsRouter.post("/", uploadMiddleware, asyncHandler(uploadFileController));
 
