@@ -14,6 +14,15 @@ import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const paymentsRouter = Router();
 
+// Rota de teste pública para verificar se o router está funcionando
+paymentsRouter.get("/test", (_req, res) => {
+  console.log("✅ [PAYMENTS TEST] Endpoint de teste do payments router chamado");
+  res.json({ 
+    message: "Payments router está funcionando!",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Rotas protegidas (requerem autenticação)
 paymentsRouter.post("/pix", (req, res, next) => {
   console.log("🔵 [ROUTE] Rota /pix chamada");

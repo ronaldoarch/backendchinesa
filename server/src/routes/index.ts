@@ -23,7 +23,23 @@ apiRouter.use((req, res, next) => {
 });
 
 apiRouter.get("/health", (_req, res) => {
+  console.log("✅ [HEALTH] Health check chamado");
   res.json({ ok: true });
+});
+
+// Endpoint de teste para verificar se as rotas estão funcionando
+apiRouter.get("/test", (_req, res) => {
+  console.log("✅ [TEST] Endpoint de teste chamado");
+  res.json({ 
+    message: "API está funcionando!",
+    timestamp: new Date().toISOString(),
+    routes: [
+      "/api/health",
+      "/api/payments/pix",
+      "/api/payments/card",
+      "/api/payments/boleto"
+    ]
+  });
 });
 
 // Endpoint temporário para descobrir o IP do servidor
