@@ -1,80 +1,105 @@
-// Script para resetar senha via Coolify
-// Execute no terminal do Coolify: node reset-password-coolify.js teste teste123
+#!/usr/bin/env node
 
-const bcrypt = require("bcrypt");
+/**
+ * Script para resetar senha de usuário no Coolify
+ * 
+ * Uso:
+ *   node reset-password-coolify.js <username> <nova_senha>
+ * 
+ * Exemplo:
+ *   node reset-password-coolify.js admin MinhaNovaSenha123
+ */
+
 const mysql = require("mysql2/promise");
+const bcrypt = require("bcrypt");
 
-// Usar variáveis de ambiente do Coolify
+// Obter argumentos da linha de comando
+const args = process.argv.slice(2);
+
+if (args.length < 2) {
+  console.error("❌ Uso: node reset-password-coolify.js <username> <nova_senha>");
+  console.error("   Exemplo: node reset-password-coolify.js admin MinhaNovaSenha123");
+  process.exit(1);
+}
+
+const [username, newPassword] = args;
+
+// Configuração do banco de dados a partir das variáveis de ambiente
 const dbConfig = {
-  host: process.env.DB_HOST,
+  host: process.env.DB_HOST || "localhost",
   port: parseInt(process.env.DB_PORT || "3306"),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "railway",
+  waitForConnections: true,
+  connectionLimit: 1
 };
 
 async function resetPassword() {
-  const username = process.argv[2] || "teste";
-  const newPassword = process.argv[3] || "teste123";
-  
-  console.log(`🔄 Resetando senha para: ${username}`);
-  console.log(`   Nova senha: ${newPassword}`);
-  console.log(`   DB Host: ${dbConfig.host}`);
-  console.log(`   DB Name: ${dbConfig.database}`);
-  
-  if (!dbConfig.host || !dbConfig.user || !dbConfig.password || !dbConfig.database) {
-    console.error("❌ Erro: Variáveis de ambiente do banco não configuradas!");
-    console.error("   Verifique: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME");
-    process.exit(1);
-  }
-  
-  const connection = await mysql.createConnection(dbConfig);
+  let connection;
   
   try {
-    // Verificar se usuário existe
+    console.log("🔌 Conectando ao banco de dados...");
+    console.log("   Host:", dbConfig.host);
+    console.log("   Port:", dbConfig.port);
+    console.log("   User:", dbConfig.user);
+    console.log("   Database:", dbConfig.database);
+    
+    connection = await mysql.createConnection(dbConfig);
+    console.log("✅ Conectado ao banco de dados!");
+    
+    // Verificar se o usuário existe
+    console.log(`\n🔍 Verificando se o usuário "${username}" existe...`);
     const [users] = await connection.query(
       "SELECT id, username, is_admin FROM users WHERE username = ?",
       [username]
     );
     
-    // Gerar hash da nova senha
-    console.log("   Gerando hash da senha...");
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    
-    if (users.length === 0) {
-      console.log(`   Usuário "${username}" não encontrado. Criando...`);
-      
-      // Criar usuário se não existir
-      await connection.query(
-        "INSERT INTO users (username, password_hash, currency, is_admin) VALUES (?, ?, 'BRL', false)",
-        [username, passwordHash]
-      );
-      console.log(`✅ Usuário "${username}" criado com sucesso!`);
-    } else {
-      // Atualizar senha no banco
-      const [result] = await connection.query(
-        "UPDATE users SET password_hash = ? WHERE username = ?",
-        [passwordHash, username]
-      );
-      
-      console.log(`✅ Senha resetada com sucesso!`);
-      console.log(`   Usuário ID: ${users[0].id}`);
-      console.log(`   É admin: ${users[0].is_admin ? 'Sim' : 'Não'}`);
+    if (!users || users.length === 0) {
+      console.error(`❌ Usuário "${username}" não encontrado!`);
+      process.exit(1);
     }
     
-    console.log(`\n📝 Agora você pode fazer login com:`);
-    console.log(`   Username: ${username}`);
-    console.log(`   Senha: ${newPassword}\n`);
+    const user = users[0];
+    console.log(`✅ Usuário encontrado:`);
+    console.log(`   ID: ${user.id}`);
+    console.log(`   Username: ${user.username}`);
+    console.log(`   Admin: ${user.is_admin ? "Sim" : "Não"}`);
+    
+    // Gerar hash da nova senha
+    console.log(`\n🔐 Gerando hash da nova senha...`);
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    console.log("✅ Hash gerado com sucesso!");
+    
+    // Atualizar senha no banco
+    console.log(`\n💾 Atualizando senha no banco de dados...`);
+    await connection.query(
+      "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [passwordHash, user.id]
+    );
+    
+    console.log("✅ Senha atualizada com sucesso!");
+    console.log(`\n📋 Resumo:`);
+    console.log(`   Usuário: ${username}`);
+    console.log(`   Nova senha: ${newPassword}`);
+    console.log(`   Hash: ${passwordHash.substring(0, 20)}...`);
+    console.log(`\n✅ Pronto! O usuário "${username}" já pode fazer login com a nova senha.`);
     
   } catch (error) {
-    console.error("❌ Erro:", error.message);
-    if (error.code) {
-      console.error(`   Código: ${error.code}`);
-    }
+    console.error("❌ Erro ao resetar senha:", error.message);
+    console.error("   Stack:", error.stack);
     process.exit(1);
   } finally {
-    await connection.end();
+    if (connection) {
+      await connection.end();
+      console.log("\n🔌 Conexão fechada.");
+    }
   }
 }
 
-resetPassword();
+// Executar
+resetPassword().catch((error) => {
+  console.error("❌ Erro fatal:", error);
+  process.exit(1);
+});
