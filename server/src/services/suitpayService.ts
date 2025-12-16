@@ -79,10 +79,14 @@ async function createClient(): Promise<AxiosInstance> {
   const creds = await getCredentials();
 
   if (!creds.clientId || !creds.clientSecret) {
-    throw new Error("Credenciais SuitPay não configuradas. Configure SUITPAY_CLIENT_ID e SUITPAY_CLIENT_SECRET.");
+    const errorMsg = "Credenciais SuitPay não configuradas. Configure SUITPAY_CLIENT_ID e SUITPAY_CLIENT_SECRET ou configure no painel admin.";
+    console.error(`[SuitPay] ❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   console.log(`[SuitPay] Criando cliente para URL: ${SUITPAY_BASE_URL}`);
+  console.log(`[SuitPay] Client ID configurado: ${creds.clientId ? "Sim" : "Não"}`);
+  console.log(`[SuitPay] Client Secret configurado: ${creds.clientSecret ? "Sim" : "Não"}`);
 
   const client = axios.create({
     baseURL: SUITPAY_BASE_URL,
