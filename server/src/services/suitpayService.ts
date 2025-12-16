@@ -73,6 +73,8 @@ async function createClient(): Promise<AxiosInstance> {
     throw new Error("Credenciais SuitPay não configuradas. Configure SUITPAY_CLIENT_ID e SUITPAY_CLIENT_SECRET.");
   }
 
+  console.log(`[SuitPay] Criando cliente para URL: ${SUITPAY_BASE_URL}`);
+
   const client = axios.create({
     baseURL: SUITPAY_BASE_URL,
     headers: {
@@ -81,7 +83,7 @@ async function createClient(): Promise<AxiosInstance> {
       "ci": creds.clientId,      // Client ID no header
       "cs": creds.clientSecret   // Client Secret no header
     },
-    timeout: 30000
+    timeout: 30000 // 30 segundos de timeout
   });
 
   // Interceptor para log de requisições
@@ -284,6 +286,7 @@ export const suitpayService = {
   async createPixPayment(request: SuitPayPixRequest): Promise<SuitPayResponse<SuitPayPixResponse>> {
     try {
       const client = await createClient();
+      console.log(`[SuitPay] Tentando criar pagamento PIX na URL: ${SUITPAY_BASE_URL}/pix`);
 
       const { data } = await client.post<SuitPayPixResponse>("/pix", request);
 
@@ -296,6 +299,18 @@ export const suitpayService = {
       };
     } catch (error: any) {
       console.error("❌ Erro ao criar pagamento PIX:", error.message);
+      console.error("❌ Código do erro:", error.code);
+      console.error("❌ URL tentada:", SUITPAY_BASE_URL);
+
+      // Tratar erros de conexão/DNS
+      if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT" || error.code === "EAI_AGAIN") {
+        console.error(`[SuitPay] ❌ Erro de conexão: ${error.code} - Não foi possível conectar a ${SUITPAY_BASE_URL}`);
+        return {
+          success: false,
+          error: "Erro de conexão com SuitPay",
+          message: `Não foi possível conectar ao servidor SuitPay (${error.code}). Verifique a URL configurada: ${SUITPAY_BASE_URL}`
+        };
+      }
 
       if (error.response?.status === 401) {
         return {
@@ -316,8 +331,8 @@ export const suitpayService = {
 
       return {
         success: false,
-        error: error.response?.data?.message || error.message,
-        message: "Erro ao criar pagamento PIX"
+        error: error.response?.data?.message || error.message || "Erro ao criar pagamento PIX",
+        message: error.response?.data?.message || "Erro ao criar pagamento PIX"
       };
     }
   },
