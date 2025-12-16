@@ -38,8 +38,10 @@ app.use((_req, res, next) => {
 
 app.use(json());
 
-// Middleware de logging global ANTES de tudo
+// Middleware de logging global ANTES de tudo - PRIMEIRO MIDDLEWARE
 app.use((req, res, next) => {
+  console.log("=".repeat(60));
+  console.log(`🌐 [GLOBAL] NOVA REQUISIÇÃO RECEBIDA`);
   console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
   console.log(`🌐 [GLOBAL] Headers:`, {
     authorization: req.headers.authorization ? "presente" : "ausente",
@@ -49,6 +51,7 @@ app.use((req, res, next) => {
   if (req.body && Object.keys(req.body).length > 0) {
     console.log(`🌐 [GLOBAL] Body:`, JSON.stringify(req.body, null, 2));
   }
+  console.log("=".repeat(60));
   next();
 });
 
