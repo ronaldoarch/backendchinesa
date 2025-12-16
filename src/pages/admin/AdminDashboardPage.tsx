@@ -35,7 +35,16 @@ export function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       const res = await api.get<DashboardStats>("/stats/dashboard");
-      setStats(res.data);
+      // Garantir que depositStatus sempre existe, mesmo se a API não retornar
+      const statsData = {
+        ...res.data,
+        depositStatus: res.data.depositStatus || {
+          paid: 0,
+          pending: 0,
+          failed: 0
+        }
+      };
+      setStats(statsData);
     } catch (err: any) {
       console.error("Erro ao carregar estatísticas:", err);
       setError(err.response?.data?.error || "Erro ao carregar estatísticas");
@@ -158,15 +167,15 @@ export function AdminDashboardPage() {
           <div style={{ marginTop: "8px", fontSize: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "#34c759" }}>✓</span>
-              <span>Pagos: {stats.depositStatus?.paid ?? 0}</span>
+              <span>Pagos: {stats?.depositStatus?.paid ?? 0}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "var(--gold)" }}>⏳</span>
-              <span>Pendentes: {stats.depositStatus?.pending ?? 0}</span>
+              <span>Pendentes: {stats?.depositStatus?.pending ?? 0}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: "var(--error)" }}>✗</span>
-              <span>Falhados: {stats.depositStatus?.failed ?? 0}</span>
+              <span>Falhados: {stats?.depositStatus?.failed ?? 0}</span>
             </div>
           </div>
         </div>
