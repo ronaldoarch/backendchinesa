@@ -19,17 +19,21 @@ const getSuitPayBaseUrl = (): string => {
   const suitpayEnv = process.env.SUITPAY_ENV || env;
   
   // Conforme documentação oficial SuitPay:
-  // Sandbox: http://sandbox.w.suitpay.app
-  // Produção: http://w.suitpay.app
+  // Sandbox: https://sandbox.w.suitpay.app ou http://sandbox.w.suitpay.app
+  // Produção: https://api.suitpay.app ou https://w.suitpay.app ou http://w.suitpay.app
   if (suitpayEnv === "sandbox" || env === "development") {
-    const defaultSandbox = "http://sandbox.w.suitpay.app";
+    // Tentar HTTPS primeiro, depois HTTP
+    const defaultSandbox = "https://sandbox.w.suitpay.app";
     console.log(`[SuitPay] Usando URL padrão de sandbox: ${defaultSandbox}`);
     return defaultSandbox;
   }
   
-  // Produção: http://w.suitpay.app (conforme documentação oficial)
-  const defaultProduction = "http://w.suitpay.app";
+  // Produção: tentar diferentes URLs possíveis
+  // Prioridade: api.suitpay.app (mais comum) > w.suitpay.app
+  // Tentar HTTPS primeiro
+  const defaultProduction = "https://api.suitpay.app";
   console.log(`[SuitPay] Usando URL padrão de produção: ${defaultProduction}`);
+  console.log(`[SuitPay] Se esta URL não funcionar, tente configurar SUITPAY_PRODUCTION_URL=https://w.suitpay.app`);
   return defaultProduction;
 };
 
