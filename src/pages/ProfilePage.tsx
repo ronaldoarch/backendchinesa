@@ -352,7 +352,6 @@ function EditDataModal({ userData, onClose, onSuccess }: EditDataModalProps) {
               placeholder="(00) 00000-0000"
               disabled={loading}
             />
-            <small>Necessário para pagamentos via XBankAccess</small>
           </div>
 
           <div className="form-group">
@@ -365,7 +364,6 @@ function EditDataModal({ userData, onClose, onSuccess }: EditDataModalProps) {
               placeholder="seu@email.com"
               disabled={loading}
             />
-            <small>Necessário para pagamentos via XBankAccess</small>
           </div>
 
           <div className="form-group">
@@ -379,7 +377,6 @@ function EditDataModal({ userData, onClose, onSuccess }: EditDataModalProps) {
               maxLength={14}
               disabled={loading}
             />
-            <small>Necessário para pagamentos via XBankAccess</small>
           </div>
 
           {error && (

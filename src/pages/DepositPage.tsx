@@ -70,18 +70,10 @@ export function DepositPage() {
         // Calcular data de vencimento (1 dia a partir de agora)
         const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         
-        // Validar campos obrigatórios para XBankAccess
-        if (!clientData.email || !clientData.document || !clientData.phone) {
-          setError("XBankAccess requer email, documento e telefone. Complete seu perfil primeiro.");
-          setLoading(false);
-          return;
-        }
-        
         response = await api.post<{ success: boolean; transaction: Transaction }>("/payments/pix", {
           amount: amountValue,
           dueDate,
-          client: clientData,
-          gateway: "xbankaccess"
+          client: clientData
         });
       } else if (selectedMethod === "CARD") {
         // Para cartão, precisaríamos de um formulário de cartão
@@ -127,7 +119,7 @@ export function DepositPage() {
         <div className="deposit-provider-card">
           <div className="deposit-provider-logo">🏦</div>
           <div className="deposit-provider-info">
-            <span>XBankAccess</span>
+            <span>SuitPay</span>
             <small>Gateway de pagamento</small>
           </div>
         </div>
