@@ -16,17 +16,30 @@ export const api = axios.create({ baseURL });
 
 // Interceptor para adicionar token em todas as requisições
 api.interceptors.request.use((config) => {
+  console.log("🌐 [FRONTEND API] Fazendo requisição:", config.method?.toUpperCase(), config.url);
+  console.log("🌐 [FRONTEND API] Base URL:", config.baseURL);
+  console.log("🌐 [FRONTEND API] URL completa:", `${config.baseURL}${config.url}`);
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log("🌐 [FRONTEND API] Token presente:", token.substring(0, 20) + "...");
+  } else {
+    console.log("🌐 [FRONTEND API] Token ausente");
   }
   return config;
 });
 
 // Interceptor para tratar erros de autenticação
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("✅ [FRONTEND API] Resposta recebida:", response.config.method?.toUpperCase(), response.config.url, response.status);
+    return response;
+  },
   (error) => {
+    console.error("❌ [FRONTEND API] Erro na requisição:", error.config?.method?.toUpperCase(), error.config?.url);
+    console.error("❌ [FRONTEND API] Status:", error.response?.status);
+    console.error("❌ [FRONTEND API] Erro:", error.message);
+    console.error("❌ [FRONTEND API] Response data:", error.response?.data);
     const status = error.response?.status;
     const url = error.config?.url || "";
 

@@ -71,11 +71,19 @@ export function DepositPage() {
         // Calcular data de vencimento (1 dia a partir de agora)
         const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         
+        console.log("💰 [DEPOSIT] Criando pagamento PIX:", {
+          amount: amountValue,
+          dueDate,
+          client: clientData
+        });
+        
         response = await api.post<{ success: boolean; transaction: Transaction }>("/payments/pix", {
           amount: amountValue,
           dueDate,
           client: clientData
         });
+        
+        console.log("✅ [DEPOSIT] Resposta do pagamento PIX:", response.data);
       } else if (selectedMethod === "CARD") {
         // Para cartão, precisaríamos de um formulário de cartão
         setError("Pagamento com cartão em desenvolvimento. Use PIX por enquanto.");
