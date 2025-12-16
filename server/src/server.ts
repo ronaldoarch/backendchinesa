@@ -143,7 +143,18 @@ console.log("🔧 [SERVER] Rotas disponíveis no apiRouter:", [
   "/playfivers"
 ]);
 
-app.use("/api", apiRouter);
+// Log ANTES de montar o apiRouter
+console.log("🔧 [SERVER] ANTES de montar apiRouter em /api");
+console.log("🔧 [SERVER] apiRouter definido?", !!apiRouter);
+console.log("🔧 [SERVER] apiRouter.stack length:", apiRouter.stack?.length || 0);
+
+app.use("/api", (req, res, next) => {
+  console.log("🚨 [API MIDDLEWARE] Requisição chegou em /api:", req.method, req.path);
+  console.log("🚨 [API MIDDLEWARE] URL completa:", req.originalUrl);
+  next();
+}, apiRouter);
+
+console.log("🔧 [SERVER] DEPOIS de montar apiRouter em /api");
 
 // Health check endpoint (importante para Coolify)
 app.get("/health", (_req, res) => {
