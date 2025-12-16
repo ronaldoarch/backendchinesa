@@ -35,6 +35,8 @@ apiRouter.get("/health", (_req, res) => {
 // Endpoint de teste para verificar se as rotas estão funcionando
 apiRouter.get("/test", (_req, res) => {
   console.log("✅ [TEST] Endpoint de teste chamado - ROTA FUNCIONANDO!");
+  console.log("✅ [TEST] Request path:", _req.path);
+  console.log("✅ [TEST] Request url:", _req.url);
   res.json({ 
     message: "API está funcionando!",
     timestamp: new Date().toISOString(),
@@ -44,6 +46,17 @@ apiRouter.get("/test", (_req, res) => {
       "/api/payments/card",
       "/api/payments/boleto"
     ]
+  });
+});
+
+// Teste alternativo - mesma rota mas com método diferente
+apiRouter.all("/test-all", (_req, res) => {
+  console.log("✅ [TEST-ALL] Endpoint de teste ALL chamado!");
+  res.json({ 
+    message: "API está funcionando (ALL method)!",
+    method: _req.method,
+    path: _req.path,
+    url: _req.url
   });
 });
 
