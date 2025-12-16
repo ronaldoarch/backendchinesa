@@ -29,14 +29,7 @@ apiRouter.use((req, res, next) => {
   next();
 });
 
-apiRouter.get("/health", (_req, res) => {
-  console.log("✅ [HEALTH] Health check chamado");
-  console.log("✅ [HEALTH] Request path:", _req.path);
-  console.log("✅ [HEALTH] Request url:", _req.url);
-  res.json({ ok: true, timestamp: new Date().toISOString() });
-});
-
-// Endpoint de teste para verificar se as rotas estão funcionando
+// IMPORTANTE: Registrar /test ANTES de /health para testar ordem
 apiRouter.get("/test", (_req, res) => {
   console.log("✅ [TEST] Endpoint de teste chamado - ROTA FUNCIONANDO!");
   console.log("✅ [TEST] Request path:", _req.path);
@@ -51,6 +44,13 @@ apiRouter.get("/test", (_req, res) => {
       "/api/payments/boleto"
     ]
   });
+});
+
+apiRouter.get("/health", (_req, res) => {
+  console.log("✅ [HEALTH] Health check chamado");
+  console.log("✅ [HEALTH] Request path:", _req.path);
+  console.log("✅ [HEALTH] Request url:", _req.url);
+  res.json({ ok: true, timestamp: new Date().toISOString() });
 });
 
 // Teste alternativo - mesma rota mas com método diferente
