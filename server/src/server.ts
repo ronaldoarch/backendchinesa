@@ -148,6 +148,18 @@ console.log("🔧 [SERVER] ANTES de montar apiRouter em /api");
 console.log("🔧 [SERVER] apiRouter definido?", !!apiRouter);
 console.log("🔧 [SERVER] apiRouter.stack length:", apiRouter.stack?.length || 0);
 
+// Listar todas as rotas registradas no apiRouter
+if (apiRouter.stack) {
+  console.log("🔧 [SERVER] Rotas no apiRouter.stack:");
+  apiRouter.stack.forEach((layer: any, index: number) => {
+    if (layer.route) {
+      console.log(`  ${index}: ${Object.keys(layer.route.methods).join(', ').toUpperCase()} ${layer.route.path}`);
+    } else if (layer.name === 'router') {
+      console.log(`  ${index}: Router montado em ${layer.regexp}`);
+    }
+  });
+}
+
 app.use("/api", (req, res, next) => {
   console.log("🚨 [API MIDDLEWARE] Requisição chegou em /api:", req.method, req.path);
   console.log("🚨 [API MIDDLEWARE] URL completa:", req.originalUrl);
