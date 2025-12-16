@@ -6,12 +6,12 @@ import crypto from "crypto";
 // Configurações da API SuitPay
 const getSuitPayBaseUrl = (): string => {
   const env = process.env.NODE_ENV || "production";
-  // Sandbox: http://sandbox.w.suitpay.app
-  // Produção: http://w.suitpay.app
+  // Sandbox: https://sandbox.w.suitpay.app
+  // Produção: https://w.suitpay.app
   if (env === "development" || process.env.SUITPAY_ENV === "sandbox") {
-    return process.env.SUITPAY_SANDBOX_URL || "http://sandbox.w.suitpay.app";
+    return process.env.SUITPAY_SANDBOX_URL || "https://sandbox.w.suitpay.app";
   }
-  return process.env.SUITPAY_PRODUCTION_URL || "http://w.suitpay.app";
+  return process.env.SUITPAY_PRODUCTION_URL || "https://w.suitpay.app";
 };
 
 const SUITPAY_BASE_URL = getSuitPayBaseUrl();

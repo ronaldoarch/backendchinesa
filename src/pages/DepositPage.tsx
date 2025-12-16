@@ -109,7 +109,21 @@ export function DepositPage() {
       }
     } catch (error: any) {
       console.error("Erro ao criar pagamento:", error);
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || "Erro ao processar pagamento";
+      let errorMsg = "Erro ao processar pagamento";
+      
+      if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      // Mensagens mais amigáveis para erros comuns
+      if (errorMsg.includes("ENOTFOUND") || errorMsg.includes("conexão") || errorMsg.includes("conectar")) {
+        errorMsg = "Erro de conexão com o gateway de pagamento. Verifique a configuração do SuitPay.";
+      }
+      
       setError(errorMsg);
     } finally {
       setLoading(false);

@@ -114,13 +114,26 @@ export async function createPixPaymentController(req: Request, res: Response): P
     });
 
     // Chamar API SuitPay
-    const result = await suitpayService.createPixPayment(suitpayRequest);
+    let result;
+    try {
+      result = await suitpayService.createPixPayment(suitpayRequest);
+    } catch (error: any) {
+      console.error("❌ Erro ao chamar SuitPay:", error);
+      await updateTransactionStatus(requestNumber, "FAILED", undefined, { 
+        error: error.message || "Erro de conexão com SuitPay" 
+      });
+      res.status(500).json({
+        error: "Erro ao conectar com SuitPay",
+        message: error.message || "Não foi possível conectar ao gateway de pagamento. Verifique a configuração."
+      });
+      return;
+    }
 
     if (!result.success || !result.data) {
       await updateTransactionStatus(requestNumber, "FAILED", undefined, { error: result.error });
       res.status(500).json({
         error: result.error || "Erro ao criar pagamento PIX",
-        message: result.message
+        message: result.message || "Erro ao processar pagamento"
       });
       return;
     }
