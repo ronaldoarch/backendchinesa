@@ -110,6 +110,24 @@ try {
   console.warn("⚠️ Aviso: Não foi possível configurar diretório de uploads:", error);
 }
 
+// Log antes de montar as rotas
+console.log("🔧 [SERVER] Montando apiRouter em /api");
+console.log("🔧 [SERVER] Rotas disponíveis no apiRouter:", [
+  "/health",
+  "/auth",
+  "/providers",
+  "/games",
+  "/banners",
+  "/promotions",
+  "/settings",
+  "/payments",
+  "/stats",
+  "/tracking",
+  "/bonuses",
+  "/uploads",
+  "/playfivers"
+]);
+
 app.use("/api", apiRouter);
 
 // Health check endpoint (importante para Coolify)

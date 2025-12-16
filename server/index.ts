@@ -99,6 +99,24 @@ try {
 const frontendDir = path.resolve(__dirname, "..", "public_html");
 app.use(express.static(frontendDir));
 
+// Log antes de montar as rotas
+console.log("🔧 [INDEX] Montando apiRouter em /api");
+console.log("🔧 [INDEX] Rotas disponíveis no apiRouter:", [
+  "/health",
+  "/auth",
+  "/providers",
+  "/games",
+  "/banners",
+  "/promotions",
+  "/settings",
+  "/payments",
+  "/stats",
+  "/tracking",
+  "/bonuses",
+  "/uploads",
+  "/playfivers"
+]);
+
 // Montar todas as rotas da API através do apiRouter
 // Isso inclui: /api/auth, /api/providers, /api/games, /api/banners, 
 // /api/settings, /api/payments, /api/stats, /api/tracking, /api/bonuses, etc.

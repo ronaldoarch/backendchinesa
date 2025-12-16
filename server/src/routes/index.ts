@@ -15,6 +15,13 @@ import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
 
+// Middleware de logging para todas as rotas da API
+apiRouter.use((req, res, next) => {
+  console.log(`🔵 [API ROUTER] ${req.method} ${req.path}`);
+  console.log(`🔵 [API ROUTER] URL completa: ${req.url}`);
+  next();
+});
+
 apiRouter.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
