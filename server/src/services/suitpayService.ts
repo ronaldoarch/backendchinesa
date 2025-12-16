@@ -5,13 +5,22 @@ import crypto from "crypto";
 
 // Configurações da API SuitPay
 const getSuitPayBaseUrl = (): string => {
+  // Prioridade: variável de ambiente > configuração padrão
+  if (process.env.SUITPAY_PRODUCTION_URL) {
+    return process.env.SUITPAY_PRODUCTION_URL;
+  }
+  if (process.env.SUITPAY_SANDBOX_URL) {
+    return process.env.SUITPAY_SANDBOX_URL;
+  }
+  
   const env = process.env.NODE_ENV || "production";
   // Sandbox: https://sandbox.w.suitpay.app
-  // Produção: https://w.suitpay.app
+  // Produção: https://w.suitpay.app ou https://api.suitpay.app
   if (env === "development" || process.env.SUITPAY_ENV === "sandbox") {
-    return process.env.SUITPAY_SANDBOX_URL || "https://sandbox.w.suitpay.app";
+    return "https://sandbox.w.suitpay.app";
   }
-  return process.env.SUITPAY_PRODUCTION_URL || "https://w.suitpay.app";
+  // Tentar api.suitpay.app primeiro (mais comum)
+  return "https://api.suitpay.app";
 };
 
 const SUITPAY_BASE_URL = getSuitPayBaseUrl();
