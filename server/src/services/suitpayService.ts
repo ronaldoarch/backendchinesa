@@ -18,22 +18,24 @@ const getSuitPayBaseUrl = (): string => {
   const env = process.env.NODE_ENV || "production";
   const suitpayEnv = process.env.SUITPAY_ENV || env;
   
-  // Conforme documentação oficial SuitPay:
-  // Sandbox: https://sandbox.w.suitpay.app ou http://sandbox.w.suitpay.app
-  // Produção: https://api.suitpay.app ou https://w.suitpay.app ou http://w.suitpay.app
+  // Conforme documentação oficial SuitPay em https://api.suitpay.app/:
+  // Sandbox: http://sandbox.w.suitpay.app
+  // Produção: http://w.suitpay.app
+  // 
+  // NOTA: Se w.suitpay.app não resolver DNS, tente usar https://api.suitpay.app
+  // que é a URL da documentação e pode funcionar como alternativa
   if (suitpayEnv === "sandbox" || env === "development") {
-    // Tentar HTTPS primeiro, depois HTTP
-    const defaultSandbox = "https://sandbox.w.suitpay.app";
+    const defaultSandbox = "http://sandbox.w.suitpay.app";
     console.log(`[SuitPay] Usando URL padrão de sandbox: ${defaultSandbox}`);
     return defaultSandbox;
   }
   
-  // Produção: tentar diferentes URLs possíveis
-  // Prioridade: api.suitpay.app (mais comum) > w.suitpay.app
-  // Tentar HTTPS primeiro
-  const defaultProduction = "https://api.suitpay.app";
+  // Produção: conforme documentação oficial é http://w.suitpay.app
+  // Mas se não resolver DNS, api.suitpay.app pode funcionar
+  // Tente primeiro w.suitpay.app (conforme doc), se falhar, use api.suitpay.app
+  const defaultProduction = "http://w.suitpay.app";
   console.log(`[SuitPay] Usando URL padrão de produção: ${defaultProduction}`);
-  console.log(`[SuitPay] Se esta URL não funcionar, tente configurar SUITPAY_PRODUCTION_URL=https://w.suitpay.app`);
+  console.log(`[SuitPay] Se esta URL não funcionar (DNS não resolve), configure SUITPAY_PRODUCTION_URL=https://api.suitpay.app`);
   return defaultProduction;
 };
 
