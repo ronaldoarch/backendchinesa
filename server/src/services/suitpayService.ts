@@ -18,24 +18,19 @@ const getSuitPayBaseUrl = (): string => {
   const env = process.env.NODE_ENV || "production";
   const suitpayEnv = process.env.SUITPAY_ENV || env;
   
-  // Conforme documentação oficial SuitPay em https://api.suitpay.app/:
-  // Sandbox: http://sandbox.w.suitpay.app
-  // Produção: http://w.suitpay.app
-  // 
-  // NOTA: Se w.suitpay.app não resolver DNS, tente usar https://api.suitpay.app
-  // que é a URL da documentação e pode funcionar como alternativa
+  // Conforme documentação oficial SuitPay:
+  // Sandbox: https://sandbox.ws.suitpay.app
+  // Produção: https://ws.suitpay.app
+  // IMPORTANTE: É "ws.suitpay.app" (com "ws"), não "w.suitpay.app"!
   if (suitpayEnv === "sandbox" || env === "development") {
-    const defaultSandbox = "http://sandbox.w.suitpay.app";
+    const defaultSandbox = "https://sandbox.ws.suitpay.app";
     console.log(`[SuitPay] Usando URL padrão de sandbox: ${defaultSandbox}`);
     return defaultSandbox;
   }
   
-  // Produção: conforme documentação oficial é http://w.suitpay.app
-  // Mas se não resolver DNS, api.suitpay.app pode funcionar
-  // Tente primeiro w.suitpay.app (conforme doc), se falhar, use api.suitpay.app
-  const defaultProduction = "http://w.suitpay.app";
+  // Produção: conforme documentação oficial é https://ws.suitpay.app
+  const defaultProduction = "https://ws.suitpay.app";
   console.log(`[SuitPay] Usando URL padrão de produção: ${defaultProduction}`);
-  console.log(`[SuitPay] Se esta URL não funcionar (DNS não resolve), configure SUITPAY_PRODUCTION_URL=https://api.suitpay.app`);
   return defaultProduction;
 };
 
@@ -338,9 +333,8 @@ export const suitpayService = {
    * POST /pix
    */
   async createPixPayment(request: SuitPayPixRequest): Promise<SuitPayResponse<SuitPayPixResponse>> {
-    // Tentar primeira URL (padrão)
-    let baseUrl = SUITPAY_BASE_URL;
-    const alternativeUrl = baseUrl.includes("w.suitpay.app") ? "https://api.suitpay.app" : null;
+    // URL base (já corrigida para ws.suitpay.app)
+    const baseUrl = SUITPAY_BASE_URL;
     
     try {
       // Verificar credenciais antes de fazer a requisição
@@ -349,7 +343,6 @@ export const suitpayService = {
         requestNumber: request.requestNumber,
         amount: request.amount,
         url: `${baseUrl}/pix`,
-        alternativeUrl: alternativeUrl ? `${alternativeUrl}/pix` : null,
         hasClientId: !!creds.clientId,
         hasClientSecret: !!creds.clientSecret,
         clientIdPrefix: creds.clientId ? creds.clientId.substring(0, 10) + "..." : "não configurado"
@@ -364,49 +357,16 @@ export const suitpayService = {
         };
       }
 
-      let client = await createClient();
+      const client = await createClient();
       console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${baseUrl}/pix`);
 
-      try {
-        const { data } = await client.post<SuitPayPixResponse>("/pix", request);
-        console.log(`✅ Pagamento PIX criado: ${request.requestNumber}`);
-        return {
-          success: true,
-          data,
-          message: "Pagamento PIX criado com sucesso"
-        };
-      } catch (firstError: any) {
-        // Verificar se é erro de DNS (pode estar em error.code ou na mensagem)
-        const isDnsError = 
-          firstError.code === "ENOTFOUND" || 
-          firstError.code === "EAI_AGAIN" ||
-          firstError.message?.includes("ENOTFOUND") ||
-          firstError.message?.includes("getaddrinfo") ||
-          firstError.message?.includes("ENOTFOUND");
-        
-        // Se falhar com DNS/ENOTFOUND e houver URL alternativa, tentar novamente
-        if (isDnsError && alternativeUrl) {
-          console.warn(`[SuitPay] ⚠️ Primeira URL falhou (DNS error: ${firstError.code || firstError.message}), tentando URL alternativa: ${alternativeUrl}`);
-          baseUrl = alternativeUrl;
-          // Criar novo cliente com URL alternativa
-          client = await createClient(alternativeUrl);
-          console.log(`[SuitPay] Cliente alternativo criado, fazendo requisição POST para: ${alternativeUrl}/pix`);
-          
-          try {
-            const { data } = await client.post<SuitPayPixResponse>("/pix", request);
-            console.log(`✅ Pagamento PIX criado com URL alternativa: ${request.requestNumber}`);
-            return {
-              success: true,
-              data,
-              message: "Pagamento PIX criado com sucesso"
-            };
-          } catch (secondError: any) {
-            console.error(`[SuitPay] ❌ URL alternativa também falhou: ${secondError.message}`);
-            throw secondError; // Se a alternativa também falhar, lançar o erro
-          }
-        }
-        throw firstError; // Re-throw se não for erro de DNS ou não houver alternativa
-      }
+      const { data } = await client.post<SuitPayPixResponse>("/pix", request);
+      console.log(`✅ Pagamento PIX criado: ${request.requestNumber}`);
+      return {
+        success: true,
+        data,
+        message: "Pagamento PIX criado com sucesso"
+      };
     } catch (error: any) {
       console.error("❌ Erro ao criar pagamento PIX:", error.message);
       console.error("❌ Código do erro:", error.code);
