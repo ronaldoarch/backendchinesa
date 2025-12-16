@@ -332,11 +332,25 @@ export const suitpayService = {
    */
   async createPixPayment(request: SuitPayPixRequest): Promise<SuitPayResponse<SuitPayPixResponse>> {
     try {
+      // Verificar credenciais antes de fazer a requisição
+      const creds = await getCredentials();
       console.log(`[SuitPay] Iniciando criação de pagamento PIX:`, {
         requestNumber: request.requestNumber,
         amount: request.amount,
-        url: `${SUITPAY_BASE_URL}/pix`
+        url: `${SUITPAY_BASE_URL}/pix`,
+        hasClientId: !!creds.clientId,
+        hasClientSecret: !!creds.clientSecret,
+        clientIdPrefix: creds.clientId ? creds.clientId.substring(0, 10) + "..." : "não configurado"
       });
+
+      if (!creds.clientId || !creds.clientSecret) {
+        console.error("[SuitPay] ❌ Credenciais não configuradas!");
+        return {
+          success: false,
+          error: "Credenciais não configuradas",
+          message: "Configure as credenciais SuitPay no painel admin antes de criar pagamentos"
+        };
+      }
 
       const client = await createClient();
       console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${SUITPAY_BASE_URL}/pix`);
