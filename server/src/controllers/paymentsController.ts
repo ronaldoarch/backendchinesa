@@ -3,6 +3,8 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { suitpayService, SuitPayPixRequest, SuitPayCardRequest, SuitPayBoletoRequest } from "../services/suitpayService";
 import { createTransaction, updateTransactionStatus, updateUserBalance, findTransactionByRequestNumber, listUserTransactions } from "../services/transactionsService";
+import { applyBonusToDeposit } from "../services/bonusService";
+import { dispatchEvent } from "../services/trackingService";
 import { pool } from "../config/database";
 
 const pixRequestSchema = z.object({
@@ -101,6 +103,14 @@ export async function createPixPaymentController(req: Request, res: Response): P
       status: "PENDING",
       dueDate: expirationDate,
       callbackUrl
+    });
+
+    // Disparar evento de tracking
+    await dispatchEvent("deposit_created", {
+      userId,
+      transactionId: transaction.id,
+      amount,
+      paymentMethod: "PIX"
     });
 
     // Chamar API SuitPay
@@ -419,12 +429,53 @@ export async function webhookController(req: Request, res: Response): Promise<vo
     // Se pagamento foi aprovado (PAID_OUT), atualizar saldo do usuário
     // Status possíveis: PAID_OUT (pago), CANCELED (cancelado), CHARGEBACK (estorno)
     if (status === "PAID_OUT" && transaction.status !== "PAID_OUT") {
+      // Atualizar saldo do usuário
       await updateUserBalance(transaction.userId, transaction.amount);
       console.log(`✅ Saldo atualizado para usuário ${transaction.userId}: +${transaction.amount}`);
+
+      // Aplicar bônus automático (se houver)
+      if (transaction.amount > 0) {
+        try {
+          const userBonus = await applyBonusToDeposit(
+            transaction.userId,
+            transaction.id,
+            transaction.amount
+          );
+          if (userBonus) {
+            console.log(`🎁 Bônus aplicado: ${userBonus.bonusAmount} para usuário ${transaction.userId}`);
+            // Disparar evento de tracking
+            await dispatchEvent("bonus_applied", {
+              userId: transaction.userId,
+              bonusId: userBonus.bonusId,
+              bonusAmount: userBonus.bonusAmount,
+              transactionId: transaction.id
+            });
+          }
+        } catch (error: any) {
+          console.error("Erro ao aplicar bônus:", error);
+          // Não bloquear o processamento do webhook se houver erro no bônus
+        }
+      }
+
+      // Disparar evento de tracking
+      await dispatchEvent("deposit_paid", {
+        userId: transaction.userId,
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        paymentMethod: transaction.paymentMethod
+      });
     } else if (status === "CHARGEBACK" && transaction.status === "PAID_OUT") {
       // Se houve estorno, reverter o saldo
       await updateUserBalance(transaction.userId, -transaction.amount);
       console.log(`⚠️ Estorno processado para usuário ${transaction.userId}: -${transaction.amount}`);
+      
+      // Disparar evento de tracking
+      await dispatchEvent("deposit_failed", {
+        userId: transaction.userId,
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        reason: "chargeback"
+      });
     }
 
     console.log(`✅ Webhook processado: ${requestNumber} -> ${status}`);

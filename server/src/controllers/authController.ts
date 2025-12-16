@@ -9,6 +9,7 @@ import {
   updateUserProfile,
   updateUserPassword
 } from "../services/authService";
+import { dispatchEvent } from "../services/trackingService";
 
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
@@ -64,6 +65,12 @@ export async function registerController(req: Request, res: Response): Promise<v
       token
     });
     console.log("✅ [REGISTER] Resposta enviada com sucesso");
+
+    // Disparar evento de tracking
+    await dispatchEvent("user_registered", {
+      userId: user.id,
+      username: user.username
+    });
   } catch (error: any) {
     // eslint-disable-next-line no-console
     console.error("❌ [REGISTER] Erro ao criar usuário:", {
@@ -152,6 +159,12 @@ export async function loginController(req: Request, res: Response): Promise<void
       token_generated: !!token
     });
     res.json(responseData);
+
+    // Disparar evento de tracking
+    await dispatchEvent("user_login", {
+      userId: user.id,
+      username: user.username
+    });
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Login: Erro inesperado", error);

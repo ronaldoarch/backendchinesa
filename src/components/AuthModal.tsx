@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, setAuthToken, setUser, getUser } from "../services/api";
+import { trackFacebookEvent } from "./FacebookPixel";
 
 type Props = {
   open: boolean;
@@ -87,6 +88,12 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
       const savedUser = getUser();
       // eslint-disable-next-line no-console
       console.log("Usuário salvo no localStorage:", savedUser);
+      
+      // Disparar evento do Facebook Pixel
+      trackFacebookEvent("CompleteRegistration", {
+        value: 0,
+        currency: "BRL"
+      });
       
       onSuccess(response.data.user);
       

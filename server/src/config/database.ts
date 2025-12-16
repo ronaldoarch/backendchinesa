@@ -225,6 +225,105 @@ export async function initDb() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Tabela de bônus
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS bonuses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        type ENUM('first_deposit', 'deposit', 'vip_level', 'custom') NOT NULL,
+        bonus_percentage DECIMAL(5,2) DEFAULT 0,
+        bonus_fixed DECIMAL(10,2) DEFAULT 0,
+        min_deposit DECIMAL(10,2) DEFAULT 0,
+        max_bonus DECIMAL(10,2) NULL,
+        rollover_multiplier DECIMAL(5,2) DEFAULT 1,
+        rtp_percentage DECIMAL(5,2) DEFAULT 96,
+        vip_level_required INT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_type (type),
+        INDEX idx_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela de bônus de usuários
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS user_bonuses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        bonus_id INT NOT NULL,
+        transaction_id INT NOT NULL,
+        bonus_amount DECIMAL(10,2) NOT NULL,
+        rollover_required DECIMAL(10,2) NOT NULL,
+        rollover_completed DECIMAL(10,2) DEFAULT 0,
+        status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (bonus_id) REFERENCES bonuses(id) ON DELETE CASCADE,
+        FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela de apostas dos usuários
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS user_bets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        game_id VARCHAR(255) NOT NULL,
+        bet_amount DECIMAL(10,2) NOT NULL,
+        win_amount DECIMAL(10,2) DEFAULT 0,
+        rtp_used DECIMAL(5,2) DEFAULT 96,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela de webhooks de tracking
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS webhooks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        url TEXT NOT NULL,
+        enabled BOOLEAN DEFAULT true,
+        events JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_enabled (enabled)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Adicionar colunas VIP e estatísticas aos usuários se não existirem
+    try {
+      const [vipColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'vip_level'`
+      );
+      
+      if (!vipColumns || vipColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN vip_level INT DEFAULT 0,
+          ADD COLUMN total_bet_amount DECIMAL(10,2) DEFAULT 0,
+          ADD COLUMN total_deposit_amount DECIMAL(10,2) DEFAULT 0,
+          ADD COLUMN total_withdrawal_amount DECIMAL(10,2) DEFAULT 0,
+          ADD COLUMN total_bonus_amount DECIMAL(10,2) DEFAULT 0,
+          ADD COLUMN last_deposit_at TIMESTAMP NULL,
+          ADD COLUMN last_bet_at TIMESTAMP NULL,
+          ADD COLUMN last_withdrawal_at TIMESTAMP NULL
+        `);
+        console.log("✅ Colunas VIP e estatísticas adicionadas à tabela users");
+      }
+    } catch (error: any) {
+      console.warn("⚠️ Aviso ao verificar/adicionar colunas VIP:", error.message);
+    }
+
     // eslint-disable-next-line no-console
     console.log("✅ Banco de dados MySQL conectado e tabelas criadas com sucesso!");
   } catch (error) {

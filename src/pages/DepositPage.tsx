@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../services/api";
 import { getUser } from "../services/api";
+import { trackFacebookEvent } from "../components/FacebookPixel";
 
 type PaymentMethod = "PIX" | "CARD" | "BOLETO";
 
@@ -97,6 +98,12 @@ export function DepositPage() {
       if (response.data.success && response.data.transaction) {
         setTransaction(response.data.transaction);
         setAmount("");
+
+        // Disparar evento do Facebook Pixel
+        trackFacebookEvent("AddPaymentInfo", {
+          value: amountValue,
+          currency: "BRL"
+        });
       } else {
         setError("Erro ao criar pagamento. Tente novamente.");
       }
