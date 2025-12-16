@@ -376,21 +376,34 @@ export const suitpayService = {
           message: "Pagamento PIX criado com sucesso"
         };
       } catch (firstError: any) {
+        // Verificar se é erro de DNS (pode estar em error.code ou na mensagem)
+        const isDnsError = 
+          firstError.code === "ENOTFOUND" || 
+          firstError.code === "EAI_AGAIN" ||
+          firstError.message?.includes("ENOTFOUND") ||
+          firstError.message?.includes("getaddrinfo") ||
+          firstError.message?.includes("ENOTFOUND");
+        
         // Se falhar com DNS/ENOTFOUND e houver URL alternativa, tentar novamente
-        if ((firstError.code === "ENOTFOUND" || firstError.code === "EAI_AGAIN") && alternativeUrl) {
-          console.warn(`[SuitPay] ⚠️ Primeira URL falhou (${firstError.code}), tentando URL alternativa: ${alternativeUrl}`);
+        if (isDnsError && alternativeUrl) {
+          console.warn(`[SuitPay] ⚠️ Primeira URL falhou (DNS error: ${firstError.code || firstError.message}), tentando URL alternativa: ${alternativeUrl}`);
           baseUrl = alternativeUrl;
           // Criar novo cliente com URL alternativa
           client = await createClient(alternativeUrl);
           console.log(`[SuitPay] Cliente alternativo criado, fazendo requisição POST para: ${alternativeUrl}/pix`);
           
-          const { data } = await client.post<SuitPayPixResponse>("/pix", request);
-          console.log(`✅ Pagamento PIX criado com URL alternativa: ${request.requestNumber}`);
-          return {
-            success: true,
-            data,
-            message: "Pagamento PIX criado com sucesso"
-          };
+          try {
+            const { data } = await client.post<SuitPayPixResponse>("/pix", request);
+            console.log(`✅ Pagamento PIX criado com URL alternativa: ${request.requestNumber}`);
+            return {
+              success: true,
+              data,
+              message: "Pagamento PIX criado com sucesso"
+            };
+          } catch (secondError: any) {
+            console.error(`[SuitPay] ❌ URL alternativa também falhou: ${secondError.message}`);
+            throw secondError; // Se a alternativa também falhar, lançar o erro
+          }
         }
         throw firstError; // Re-throw se não for erro de DNS ou não houver alternativa
       }
@@ -398,14 +411,22 @@ export const suitpayService = {
       console.error("❌ Erro ao criar pagamento PIX:", error.message);
       console.error("❌ Código do erro:", error.code);
       console.error("❌ URL tentada:", baseUrl);
+      console.error("❌ Stack completo:", error.stack);
+
+      // Verificar se é erro de DNS (pode estar em error.code ou na mensagem)
+      const isDnsError = 
+        error.code === "ENOTFOUND" || 
+        error.code === "EAI_AGAIN" ||
+        error.message?.includes("ENOTFOUND") ||
+        error.message?.includes("getaddrinfo");
 
       // Tratar erros de conexão/DNS
-      if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT" || error.code === "EAI_AGAIN") {
-        console.error(`[SuitPay] ❌ Erro de conexão: ${error.code} - Não foi possível conectar a ${SUITPAY_BASE_URL}`);
+      if (isDnsError || error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
+        console.error(`[SuitPay] ❌ Erro de conexão: ${error.code || "DNS"} - Não foi possível conectar a ${baseUrl}`);
         return {
           success: false,
           error: "Erro de conexão com SuitPay",
-          message: `Não foi possível conectar ao servidor SuitPay (${error.code}). Verifique a URL configurada: ${SUITPAY_BASE_URL}`
+          message: `Não foi possível conectar ao servidor SuitPay (${error.code || "DNS"}). Verifique a URL configurada: ${baseUrl}`
         };
       }
 
