@@ -81,14 +81,32 @@ export function AdminDashboardPage() {
     );
   }
 
-  if (!stats) {
-    return (
-      <section className="admin-section">
-        <h1>Dashboard</h1>
-        <p>Nenhum dado disponível</p>
-      </section>
-    );
-  }
+  // Garantir que stats e depositStatus sempre existam antes de renderizar
+  const safeStats = stats || {
+    totalUsers: 0,
+    newUsersToday: 0,
+    totalDeposits: 0,
+    depositsToday: 0,
+    totalWithdrawals: 0,
+    withdrawalsToday: 0,
+    totalBets: 0,
+    totalBonus: 0,
+    conversionRate: 0,
+    ftdToday: 0,
+    activeUsers: 0,
+    averageTicket: 0,
+    depositStatus: {
+      paid: 0,
+      pending: 0,
+      failed: 0
+    }
+  };
+
+  const safeDepositStatus = safeStats.depositStatus || {
+    paid: 0,
+    pending: 0,
+    failed: 0
+  };
 
   return (
     <section className="admin-section">
@@ -103,24 +121,24 @@ export function AdminDashboardPage() {
         <div className="admin-card">
           <span className="admin-card-label">Total de Depósitos</span>
           <strong className="admin-card-value">
-            {formatCurrency(stats.totalDeposits)}
+            {formatCurrency(safeStats.totalDeposits)}
           </strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
-            Hoje: {formatCurrency(stats.depositsToday)}
+            Hoje: {formatCurrency(safeStats.depositsToday)}
           </small>
         </div>
 
         <div className="admin-card">
           <span className="admin-card-label">Total de Usuários</span>
-          <strong className="admin-card-value">{stats.totalUsers}</strong>
+          <strong className="admin-card-value">{safeStats.totalUsers}</strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
-            Novos hoje: {stats.newUsersToday}
+            Novos hoje: {safeStats.newUsersToday}
           </small>
         </div>
 
         <div className="admin-card">
           <span className="admin-card-label">Taxa de Conversão</span>
-          <strong className="admin-card-value">{stats.conversionRate.toFixed(2)}%</strong>
+          <strong className="admin-card-value">{safeStats.conversionRate.toFixed(2)}%</strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
             Usuários que depositaram
           </small>
@@ -128,7 +146,7 @@ export function AdminDashboardPage() {
 
         <div className="admin-card">
           <span className="admin-card-label">FTD Hoje</span>
-          <strong className="admin-card-value">{stats.ftdToday}</strong>
+          <strong className="admin-card-value">{safeStats.ftdToday}</strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
             Primeiros depósitos
           </small>
@@ -137,16 +155,16 @@ export function AdminDashboardPage() {
         <div className="admin-card">
           <span className="admin-card-label">Total de Saques</span>
           <strong className="admin-card-value">
-            {formatCurrency(stats.totalWithdrawals)}
+            {formatCurrency(safeStats.totalWithdrawals)}
           </strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
-            Hoje: {formatCurrency(stats.withdrawalsToday)}
+            Hoje: {formatCurrency(safeStats.withdrawalsToday)}
           </small>
         </div>
 
         <div className="admin-card">
           <span className="admin-card-label">Usuários Ativos</span>
-          <strong className="admin-card-value">{stats.activeUsers}</strong>
+          <strong className="admin-card-value">{safeStats.activeUsers}</strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
             Últimos 30 dias
           </small>
@@ -155,7 +173,7 @@ export function AdminDashboardPage() {
         <div className="admin-card">
           <span className="admin-card-label">Ticket Médio</span>
           <strong className="admin-card-value">
-            {formatCurrency(stats.averageTicket)}
+            {formatCurrency(safeStats.averageTicket)}
           </strong>
           <small style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
             Média por depósito
@@ -167,15 +185,15 @@ export function AdminDashboardPage() {
           <div style={{ marginTop: "8px", fontSize: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "#34c759" }}>✓</span>
-              <span>Pagos: {stats?.depositStatus?.paid ?? 0}</span>
+              <span>Pagos: {safeDepositStatus.paid}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "var(--gold)" }}>⏳</span>
-              <span>Pendentes: {stats?.depositStatus?.pending ?? 0}</span>
+              <span>Pendentes: {safeDepositStatus.pending}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: "var(--error)" }}>✗</span>
-              <span>Falhados: {stats?.depositStatus?.failed ?? 0}</span>
+              <span>Falhados: {safeDepositStatus.failed}</span>
             </div>
           </div>
         </div>
