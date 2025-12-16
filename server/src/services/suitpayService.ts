@@ -18,16 +18,17 @@ const getSuitPayBaseUrl = (): string => {
   const env = process.env.NODE_ENV || "production";
   const suitpayEnv = process.env.SUITPAY_ENV || env;
   
-  // Sandbox: https://sandbox.w.suitpay.app
-  // Produção: https://api.suitpay.app (mais comum) ou https://w.suitpay.app
+  // Conforme documentação oficial SuitPay:
+  // Sandbox: http://sandbox.w.suitpay.app
+  // Produção: http://w.suitpay.app
   if (suitpayEnv === "sandbox" || env === "development") {
-    const defaultSandbox = "https://sandbox.w.suitpay.app";
+    const defaultSandbox = "http://sandbox.w.suitpay.app";
     console.log(`[SuitPay] Usando URL padrão de sandbox: ${defaultSandbox}`);
     return defaultSandbox;
   }
   
-  // Produção: tentar api.suitpay.app primeiro (mais comum)
-  const defaultProduction = "https://api.suitpay.app";
+  // Produção: http://w.suitpay.app (conforme documentação oficial)
+  const defaultProduction = "http://w.suitpay.app";
   console.log(`[SuitPay] Usando URL padrão de produção: ${defaultProduction}`);
   return defaultProduction;
 };
@@ -57,9 +58,20 @@ async function getCredentialsFromDb(): Promise<Partial<SuitPayCredentials>> {
 
     for (const row of rows) {
       const key = row.key.replace("suitpay.", "");
-      if (key === "clientId" || key === "ci") credentials.clientId = row.value;
-      if (key === "clientSecret" || key === "cs") credentials.clientSecret = row.value;
+      // Aceitar tanto clientId quanto ci (conforme documentação)
+      if (key === "clientId" || key === "ci") {
+        credentials.clientId = row.value;
+      }
+      // Aceitar tanto clientSecret quanto cs (conforme documentação)
+      if (key === "clientSecret" || key === "cs") {
+        credentials.clientSecret = row.value;
+      }
     }
+    
+    console.log(`[SuitPay] Credenciais do banco:`, {
+      clientId: credentials.clientId ? `${credentials.clientId.substring(0, 4)}...` : "não encontrado",
+      clientSecret: credentials.clientSecret ? "***" : "não encontrado"
+    });
 
     return credentials;
   } catch (error) {
