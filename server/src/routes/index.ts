@@ -17,8 +17,11 @@ export const apiRouter = Router();
 
 // Middleware de logging para todas as rotas da API
 apiRouter.use((req, res, next) => {
+  console.log("=".repeat(50));
   console.log(`🔵 [API ROUTER] ${req.method} ${req.path}`);
   console.log(`🔵 [API ROUTER] URL completa: ${req.url}`);
+  console.log(`🔵 [API ROUTER] Original URL: ${req.originalUrl}`);
+  console.log("=".repeat(50));
   next();
 });
 
