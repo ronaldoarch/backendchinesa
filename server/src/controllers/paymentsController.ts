@@ -179,23 +179,52 @@ export async function createPixPaymentController(req: Request, res: Response): P
       );
     }
 
+    // Buscar transação atualizada
+    let updatedTransaction;
+    try {
+      updatedTransaction = await findTransactionByRequestNumber(requestNumber);
+    } catch (error: any) {
+      console.warn("⚠️ Erro ao buscar transação atualizada (não crítico):", error);
+      updatedTransaction = null; // Usar dados do result se falhar
+    }
+
     res.status(201).json({
       success: true,
-      transaction: {
+      transaction: updatedTransaction || {
         id: transaction.id,
         requestNumber,
         transactionId: result.data.transactionId,
         qrCode: result.data.qrCode,
         qrCodeBase64: result.data.qrCodeBase64,
-        amount: result.data.amount,
-        dueDate: result.data.dueDate,
+        amount: result.data.amount || amount,
+        dueDate: result.data.dueDate || expirationDate,
         status: result.data.status || "PENDING"
       }
     });
   } catch (error: any) {
-    console.error("Erro ao criar pagamento PIX:", error);
+    console.error("❌ Erro ao criar pagamento PIX:", error);
+    console.error("❌ Stack:", error.stack);
+    console.error("❌ Tipo do erro:", error.constructor.name);
+    console.error("❌ Mensagem:", error.message);
+    console.error("❌ Código:", error.code);
+    
+    // Se já respondeu, não responder novamente
+    if (res.headersSent) {
+      console.warn("⚠️ Headers já enviados, não é possível responder novamente");
+      return;
+    }
+    
+    // Mensagem de erro mais específica
+    let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
+    if (error.message) {
+      errorMessage = error.message;
+    } else if (error.code) {
+      errorMessage = `Erro: ${error.code}`;
+    }
+    
     res.status(500).json({
-      error: error.message || "Erro ao criar pagamento PIX"
+      error: "Erro interno ao processar pagamento",
+      message: errorMessage
     });
   }
 }
