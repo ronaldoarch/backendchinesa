@@ -9,11 +9,11 @@
 
   # Proxy para API Node.js (Backend no Coolify)
   RewriteCond %{REQUEST_URI} ^/api
-  RewriteRule ^api/(.*)$ https://r404c0kskws08wccgw08kk4k.agenciamidas.com/api/$1 [P,L]
+  RewriteRule ^api/(.*)$ https://g40okoockcoskwwwgc4sowso.agenciamidas.com/api/$1 [P,L]
   
   # Proxy para uploads (Backend no Coolify)
   RewriteCond %{REQUEST_URI} ^/uploads
-  RewriteRule ^uploads/(.*)$ https://r404c0kskws08wccgw08kk4k.agenciamidas.com/uploads/$1 [P,L]
+  RewriteRule ^uploads/(.*)$ https://g40okoockcoskwwwgc4sowso.agenciamidas.com/uploads/$1 [P,L]
 
   # Frontend - React Router (SPA)
   RewriteCond %{REQUEST_FILENAME} !-f

@@ -3,7 +3,7 @@ import axios from "axios";
 // Usar URL do backend via env ou fallback para o backend real
 // IMPORTANTE: Como o proxy do .htaccess não está funcionando no Hostinger (503),
 // vamos usar a URL direta do backend no Coolify
-const backendUrl = "https://r404c0kskws08wccgw08kk4k.agenciamidas.com/api";
+const backendUrl = "https://g40okoockcoskwwwgc4sowso.agenciamidas.com/api";
 
 // Preferir VITE_API_URL (explícito) ou VITE_API_BASE_URL; depois usar backendUrl diretamente
 // Não usar proxy do .htaccess pois está retornando 503 no Hostinger
