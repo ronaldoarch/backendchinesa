@@ -95,23 +95,37 @@ export async function createPixPaymentController(req: Request, res: Response): P
     };
 
     // Criar transação no banco
-    const transaction = await createTransaction({
-      userId,
-      requestNumber,
-      paymentMethod: "PIX",
-      amount,
-      status: "PENDING",
-      dueDate: expirationDate,
-      callbackUrl
-    });
+    let transaction;
+    try {
+      transaction = await createTransaction({
+        userId,
+        requestNumber,
+        paymentMethod: "PIX",
+        amount,
+        status: "PENDING",
+        dueDate: expirationDate,
+        callbackUrl
+      });
+    } catch (error: any) {
+      console.error("❌ Erro ao criar transação no banco:", error);
+      res.status(500).json({
+        error: "Erro ao criar transação",
+        message: "Não foi possível criar a transação no banco de dados"
+      });
+      return;
+    }
 
-    // Disparar evento de tracking
-    await dispatchEvent("deposit_created", {
-      userId,
-      transactionId: transaction.id,
-      amount,
-      paymentMethod: "PIX"
-    });
+    // Disparar evento de tracking (não bloquear se falhar)
+    try {
+      await dispatchEvent("deposit_created", {
+        userId,
+        transactionId: transaction.id,
+        amount,
+        paymentMethod: "PIX"
+      });
+    } catch (error: any) {
+      console.warn("⚠️ Erro ao disparar evento de tracking (não crítico):", error);
+    }
 
     // Chamar API SuitPay
     let result;
@@ -119,8 +133,10 @@ export async function createPixPaymentController(req: Request, res: Response): P
       result = await suitpayService.createPixPayment(suitpayRequest);
     } catch (error: any) {
       console.error("❌ Erro ao chamar SuitPay:", error);
+      console.error("❌ Stack:", error.stack);
       await updateTransactionStatus(requestNumber, "FAILED", undefined, { 
-        error: error.message || "Erro de conexão com SuitPay" 
+        error: error.message || "Erro de conexão com SuitPay",
+        errorCode: error.code
       });
       res.status(500).json({
         error: "Erro ao conectar com SuitPay",
@@ -130,6 +146,7 @@ export async function createPixPaymentController(req: Request, res: Response): P
     }
 
     if (!result.success || !result.data) {
+      console.error("❌ SuitPay retornou erro:", result.error, result.message);
       await updateTransactionStatus(requestNumber, "FAILED", undefined, { error: result.error });
       res.status(500).json({
         error: result.error || "Erro ao criar pagamento PIX",
@@ -139,15 +156,20 @@ export async function createPixPaymentController(req: Request, res: Response): P
     }
 
     // Atualizar transação com dados retornados
-    await updateTransactionStatus(
-      requestNumber,
-      result.data.status || "PENDING",
-      result.data.transactionId,
-      {
-        qrCode: result.data.qrCode,
-        qrCodeBase64: result.data.qrCodeBase64
-      }
-    );
+    try {
+      await updateTransactionStatus(
+        requestNumber,
+        result.data.status || "PENDING",
+        result.data.transactionId,
+        {
+          qrCode: result.data.qrCode,
+          qrCodeBase64: result.data.qrCodeBase64
+        }
+      );
+    } catch (error: any) {
+      console.error("❌ Erro ao atualizar transação:", error);
+      // Continuar mesmo se falhar a atualização, pois a transação já foi criada
+    }
 
     // Atualizar campos específicos
     if (result.data.qrCode) {
