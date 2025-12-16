@@ -15,6 +15,8 @@ import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
 
+console.log("🚀 [ROUTES] apiRouter criado e rotas sendo registradas...");
+
 // Middleware de logging para todas as rotas da API
 apiRouter.use((req, res, next) => {
   console.log("=".repeat(50));
@@ -32,7 +34,7 @@ apiRouter.get("/health", (_req, res) => {
 
 // Endpoint de teste para verificar se as rotas estão funcionando
 apiRouter.get("/test", (_req, res) => {
-  console.log("✅ [TEST] Endpoint de teste chamado");
+  console.log("✅ [TEST] Endpoint de teste chamado - ROTA FUNCIONANDO!");
   res.json({ 
     message: "API está funcionando!",
     timestamp: new Date().toISOString(),
@@ -44,6 +46,8 @@ apiRouter.get("/test", (_req, res) => {
     ]
   });
 });
+
+console.log("✅ [ROUTES] Rotas básicas registradas: /health, /test");
 
 // Endpoint temporário para descobrir o IP do servidor
 apiRouter.get("/ip-info", (req, res) => {
@@ -166,6 +170,8 @@ apiRouter.use("/bonuses", bonusesRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);
+
+console.log("✅ [ROUTES] Todas as rotas registradas no apiRouter");
 
 
 
