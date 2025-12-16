@@ -158,15 +158,15 @@ export function AdminDashboardPage() {
           <div style={{ marginTop: "8px", fontSize: "12px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "#34c759" }}>✓</span>
-              <span>Pagos: {stats.depositStatus.paid}</span>
+              <span>Pagos: {stats.depositStatus?.paid ?? 0}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
               <span style={{ color: "var(--gold)" }}>⏳</span>
-              <span>Pendentes: {stats.depositStatus.pending}</span>
+              <span>Pendentes: {stats.depositStatus?.pending ?? 0}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: "var(--error)" }}>✗</span>
-              <span>Falhados: {stats.depositStatus.failed}</span>
+              <span>Falhados: {stats.depositStatus?.failed ?? 0}</span>
             </div>
           </div>
         </div>
