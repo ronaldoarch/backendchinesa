@@ -115,7 +115,7 @@ async function getCredentials(): Promise<SuitPayCredentials> {
  * Criar cliente HTTP com autenticação SuitPay
  * Autenticação via headers: ci (Client ID) e cs (Client Secret)
  */
-async function createClient(): Promise<AxiosInstance> {
+async function createClient(customBaseUrl?: string): Promise<AxiosInstance> {
   const creds = await getCredentials();
 
   if (!creds.clientId || !creds.clientSecret) {
@@ -124,12 +124,13 @@ async function createClient(): Promise<AxiosInstance> {
     throw new Error(errorMsg);
   }
 
-  console.log(`[SuitPay] Criando cliente para URL: ${SUITPAY_BASE_URL}`);
+  const baseUrl = customBaseUrl || SUITPAY_BASE_URL;
+  console.log(`[SuitPay] Criando cliente para URL: ${baseUrl}`);
   console.log(`[SuitPay] Client ID configurado: ${creds.clientId ? "Sim" : "Não"}`);
   console.log(`[SuitPay] Client Secret configurado: ${creds.clientSecret ? "Sim" : "Não"}`);
 
   const client = axios.create({
-    baseURL: SUITPAY_BASE_URL,
+    baseURL: baseUrl,
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
@@ -380,17 +381,8 @@ export const suitpayService = {
           console.warn(`[SuitPay] ⚠️ Primeira URL falhou (${firstError.code}), tentando URL alternativa: ${alternativeUrl}`);
           baseUrl = alternativeUrl;
           // Criar novo cliente com URL alternativa
-          const axios = require("axios");
-          const creds = await getCredentials();
-          client = axios.create({
-            baseURL: alternativeUrl,
-            headers: {
-              "Content-Type": "application/json",
-              "ci": creds.clientId,
-              "cs": creds.clientSecret
-            },
-            timeout: 30000
-          });
+          client = await createClient(alternativeUrl);
+          console.log(`[SuitPay] Cliente alternativo criado, fazendo requisição POST para: ${alternativeUrl}/pix`);
           
           const { data } = await client.post<SuitPayPixResponse>("/pix", request);
           console.log(`✅ Pagamento PIX criado com URL alternativa: ${request.requestNumber}`);
