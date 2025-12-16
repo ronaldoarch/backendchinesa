@@ -175,8 +175,8 @@ export function AdminSuitPayPage() {
         <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "12px", color: "var(--text-muted)" }}>
           <li>As credenciais são enviadas nos headers HTTP: <code>ci</code> (Client ID) e <code>cs</code> (Client Secret)</li>
           <li>IP do webhook SuitPay: <code>3.132.137.46</code> (adicione na whitelist se necessário)</li>
-          <li>Sandbox: <code>http://sandbox.w.suitpay.app</code></li>
-          <li>Produção: <code>http://w.suitpay.app</code> (ou configure <code>SUITPAY_PRODUCTION_URL</code> nas variáveis de ambiente)</li>
+          <li>Sandbox: <code>https://sandbox.ws.suitpay.app</code></li>
+          <li>Produção: <code>https://ws.suitpay.app</code> (ou configure <code>SUITPAY_PRODUCTION_URL</code> nas variáveis de ambiente)</li>
         </ul>
       </div>
     </section>
