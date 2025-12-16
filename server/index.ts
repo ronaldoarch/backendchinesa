@@ -4,8 +4,8 @@ import express from "express";
 import cors from "cors";
 import { json } from "express";
 import fs from "node:fs";
-import { apiRouter } from "./routes/index";
-import { initDb } from "./db";
+import { apiRouter } from "./src/routes/index";
+import { initDb } from "./src/config/database";
 
 const app = express();
 
