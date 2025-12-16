@@ -74,10 +74,23 @@ async function getCredentialsFromDb(): Promise<Partial<SuitPayCredentials>> {
 async function getCredentials(): Promise<SuitPayCredentials> {
   const dbCreds = await getCredentialsFromDb();
 
-  return {
+  const credentials = {
     clientId: process.env.SUITPAY_CLIENT_ID || dbCreds.clientId || "",
     clientSecret: process.env.SUITPAY_CLIENT_SECRET || dbCreds.clientSecret || ""
   };
+
+  console.log(`[SuitPay] Credenciais carregadas:`, {
+    clientId: credentials.clientId ? `${credentials.clientId.substring(0, 4)}...` : "NÃO CONFIGURADO",
+    clientSecret: credentials.clientSecret ? "***" : "NÃO CONFIGURADO",
+    source: {
+      envClientId: !!process.env.SUITPAY_CLIENT_ID,
+      envClientSecret: !!process.env.SUITPAY_CLIENT_SECRET,
+      dbClientId: !!dbCreds.clientId,
+      dbClientSecret: !!dbCreds.clientSecret
+    }
+  });
+
+  return credentials;
 }
 
 /**
@@ -307,8 +320,14 @@ export const suitpayService = {
    */
   async createPixPayment(request: SuitPayPixRequest): Promise<SuitPayResponse<SuitPayPixResponse>> {
     try {
+      console.log(`[SuitPay] Iniciando criação de pagamento PIX:`, {
+        requestNumber: request.requestNumber,
+        amount: request.amount,
+        url: `${SUITPAY_BASE_URL}/pix`
+      });
+
       const client = await createClient();
-      console.log(`[SuitPay] Tentando criar pagamento PIX na URL: ${SUITPAY_BASE_URL}/pix`);
+      console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${SUITPAY_BASE_URL}/pix`);
 
       const { data } = await client.post<SuitPayPixResponse>("/pix", request);
 
