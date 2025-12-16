@@ -160,11 +160,20 @@ if (apiRouter.stack) {
   });
 }
 
+// Middleware que captura TODAS as requisições que começam com /api
 app.use("/api", (req, res, next) => {
-  console.log("🚨 [API MIDDLEWARE] Requisição chegou em /api:", req.method, req.path);
-  console.log("🚨 [API MIDDLEWARE] URL completa:", req.originalUrl);
+  console.log("🚨 [API MIDDLEWARE] ========================================");
+  console.log("🚨 [API MIDDLEWARE] Requisição chegou em /api");
+  console.log("🚨 [API MIDDLEWARE] Method:", req.method);
+  console.log("🚨 [API MIDDLEWARE] Path:", req.path);
+  console.log("🚨 [API MIDDLEWARE] URL:", req.url);
+  console.log("🚨 [API MIDDLEWARE] Original URL:", req.originalUrl);
+  console.log("🚨 [API MIDDLEWARE] Base URL:", req.baseUrl);
+  console.log("🚨 [API MIDDLEWARE] ========================================");
   next();
-}, apiRouter);
+});
+
+app.use("/api", apiRouter);
 
 console.log("🔧 [SERVER] DEPOIS de montar apiRouter em /api");
 
