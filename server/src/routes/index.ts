@@ -23,13 +23,17 @@ apiRouter.use((req, res, next) => {
   console.log(`🔵 [API ROUTER] ${req.method} ${req.path}`);
   console.log(`🔵 [API ROUTER] URL completa: ${req.url}`);
   console.log(`🔵 [API ROUTER] Original URL: ${req.originalUrl}`);
+  console.log(`🔵 [API ROUTER] Base URL: ${req.baseUrl}`);
+  console.log(`🔵 [API ROUTER] Route: ${req.route?.path || 'N/A'}`);
   console.log("=".repeat(50));
   next();
 });
 
 apiRouter.get("/health", (_req, res) => {
   console.log("✅ [HEALTH] Health check chamado");
-  res.json({ ok: true });
+  console.log("✅ [HEALTH] Request path:", _req.path);
+  console.log("✅ [HEALTH] Request url:", _req.url);
+  res.json({ ok: true, timestamp: new Date().toISOString() });
 });
 
 // Endpoint de teste para verificar se as rotas estão funcionando
