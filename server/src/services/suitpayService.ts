@@ -7,20 +7,29 @@ import crypto from "crypto";
 const getSuitPayBaseUrl = (): string => {
   // Prioridade: variável de ambiente > configuração padrão
   if (process.env.SUITPAY_PRODUCTION_URL) {
+    console.log(`[SuitPay] Usando URL de produção da variável de ambiente: ${process.env.SUITPAY_PRODUCTION_URL}`);
     return process.env.SUITPAY_PRODUCTION_URL;
   }
-  if (process.env.SUITPAY_SANDBOX_URL) {
+  if (process.env.SUITPAY_SANDBOX_URL && (process.env.NODE_ENV === "development" || process.env.SUITPAY_ENV === "sandbox")) {
+    console.log(`[SuitPay] Usando URL de sandbox da variável de ambiente: ${process.env.SUITPAY_SANDBOX_URL}`);
     return process.env.SUITPAY_SANDBOX_URL;
   }
   
   const env = process.env.NODE_ENV || "production";
+  const suitpayEnv = process.env.SUITPAY_ENV || env;
+  
   // Sandbox: https://sandbox.w.suitpay.app
-  // Produção: https://w.suitpay.app ou https://api.suitpay.app
-  if (env === "development" || process.env.SUITPAY_ENV === "sandbox") {
-    return "https://sandbox.w.suitpay.app";
+  // Produção: https://api.suitpay.app (mais comum) ou https://w.suitpay.app
+  if (suitpayEnv === "sandbox" || env === "development") {
+    const defaultSandbox = "https://sandbox.w.suitpay.app";
+    console.log(`[SuitPay] Usando URL padrão de sandbox: ${defaultSandbox}`);
+    return defaultSandbox;
   }
-  // Tentar api.suitpay.app primeiro (mais comum)
-  return "https://api.suitpay.app";
+  
+  // Produção: tentar api.suitpay.app primeiro (mais comum)
+  const defaultProduction = "https://api.suitpay.app";
+  console.log(`[SuitPay] Usando URL padrão de produção: ${defaultProduction}`);
+  return defaultProduction;
 };
 
 const SUITPAY_BASE_URL = getSuitPayBaseUrl();
