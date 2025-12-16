@@ -37,7 +37,7 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
       style={{
         position: "relative",
         width: "100%",
-        height: "160px",
+        aspectRatio: "16 / 9", // Proporção ideal para banners (16:9)
         borderRadius: "16px",
         overflow: "hidden"
       }}

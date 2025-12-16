@@ -93,7 +93,7 @@ body {
 .logo-text {
   font-weight: 800;
   letter-spacing: 0.08em;
-  font-size: 14px;
+  font-size: 18px; /* Aumentado de 14px para 18px */
   text-transform: uppercase;
   color: var(--gold);
   text-shadow: 0 0 8px rgba(246, 196, 83, 0.5);

@@ -157,8 +157,8 @@ export function AdminBannersPage() {
             {bannerForm.imageUrl && (
               <div
                 style={{
-                  width: "150px",
-                  height: "80px",
+                  width: "200px",
+                  aspectRatio: "16 / 9", // Proporção ideal 16:9
                   border: "1px solid rgba(246, 196, 83, 0.3)",
                   borderRadius: "8px",
                   display: "flex",
