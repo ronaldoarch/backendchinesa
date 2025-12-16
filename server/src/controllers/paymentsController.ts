@@ -58,11 +58,21 @@ const boletoRequestSchema = z.object({
 });
 
 export async function createPixPaymentController(req: Request, res: Response): Promise<void> {
+  console.log("📥 [PIX] Requisição recebida para criar pagamento PIX");
+  console.log("📥 [PIX] Headers:", {
+    authorization: req.headers.authorization ? "presente" : "ausente",
+    "content-type": req.headers["content-type"]
+  });
+  console.log("📥 [PIX] Body:", JSON.stringify(req.body, null, 2));
+  
   try {
     const authReq = req as any;
     const userId = authReq.userId;
+    
+    console.log("📥 [PIX] UserId extraído:", userId);
 
     if (!userId) {
+      console.error("❌ [PIX] Usuário não autenticado");
       res.status(401).json({ error: "Usuário não autenticado" });
       return;
     }
