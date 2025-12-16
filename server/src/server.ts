@@ -37,6 +37,21 @@ app.use((_req, res, next) => {
 });
 
 app.use(json());
+
+// Middleware de logging global ANTES de tudo
+app.use((req, res, next) => {
+  console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
+  console.log(`🌐 [GLOBAL] Headers:`, {
+    authorization: req.headers.authorization ? "presente" : "ausente",
+    "content-type": req.headers["content-type"],
+    host: req.headers.host
+  });
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log(`🌐 [GLOBAL] Body:`, JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 app.use(requestLogger);
 
 // Criar diretório de uploads se não existir

@@ -12,9 +12,15 @@ export interface AuthRequest extends Request {
 }
 
 export function authenticate(req: Request, res: Response, next: NextFunction): void {
+  console.log("🔐 [AUTH] Middleware authenticate chamado");
+  console.log("🔐 [AUTH] Path:", req.path);
+  console.log("🔐 [AUTH] Method:", req.method);
+  
   const authHeader = req.headers.authorization;
+  console.log("🔐 [AUTH] Authorization header:", authHeader ? "presente" : "ausente");
   
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.error("❌ [AUTH] Token não fornecido");
     res.status(401).json({ error: "Token não fornecido" });
     return;
   }
