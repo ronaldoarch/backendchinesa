@@ -11,7 +11,7 @@ export async function uploadFileController(req: Request, res: Response): Promise
       body: req.body
     });
 
-    if (!req.file) {
+  if (!req.file) {
       console.error("❌ [UPLOAD] Nenhum arquivo recebido");
       console.error("❌ [UPLOAD] Headers:", req.headers);
       console.error("❌ [UPLOAD] Body:", req.body);
@@ -46,12 +46,12 @@ export async function uploadFileController(req: Request, res: Response): Promise
         error: "Erro ao salvar arquivo",
         message: "O arquivo não foi salvo no servidor"
       });
-      return;
-    }
+    return;
+  }
 
-    const urlPath = `/uploads/${req.file.filename}`;
+  const urlPath = `/uploads/${req.file.filename}`;
     console.log("✅ [UPLOAD] URL gerada:", urlPath);
-    res.status(201).json({ url: urlPath });
+  res.status(201).json({ url: urlPath });
   } catch (error: any) {
     console.error("❌ [UPLOAD] Erro no controller:", error);
     res.status(500).json({ 

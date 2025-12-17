@@ -175,9 +175,25 @@ export async function launchGameController(req: Request, res: Response): Promise
 
     res.json({ url: result.data.url });
   } catch (error: any) {
-    console.error("Erro ao lançar jogo:", error);
+    console.error("❌ [LAUNCH GAME] Erro ao lançar jogo:", error);
+    console.error("❌ [LAUNCH GAME] Stack:", error.stack);
+    
+    // Filtrar mensagens de erro que não são relevantes para o usuário
+    let errorMessage = error.message || "Erro ao lançar jogo";
+    
+    // Se o erro for relacionado ao SuitPay, não mostrar (não é relevante para jogos)
+    if (errorMessage.includes("suitpay") || errorMessage.includes("SuitPay") || errorMessage.includes("w.suitpay.app")) {
+      errorMessage = "Erro ao conectar com o servidor de jogos. Tente novamente.";
+    }
+    
+    // Se o erro for de conexão genérica, dar mensagem mais amigável
+    if (errorMessage.includes("ENOTFOUND") || errorMessage.includes("ECONNREFUSED")) {
+      errorMessage = "Erro ao conectar com o servidor de jogos. Verifique sua conexão.";
+    }
+    
     res.status(500).json({
-      error: error.message || "Erro ao lançar jogo"
+      error: errorMessage,
+      message: "Não foi possível lançar o jogo. Tente novamente mais tarde."
     });
   }
 }

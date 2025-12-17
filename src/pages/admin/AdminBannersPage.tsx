@@ -39,14 +39,14 @@ export function AdminBannersPage() {
         type: file.type
       });
       
-      const res = await api.post<{ url: string }>("/uploads", formData, {
+    const res = await api.post<{ url: string }>("/uploads", formData, {
         headers: { 
           "Content-Type": "multipart/form-data"
         }
-      });
+    });
       
       console.log("✅ [UPLOAD] Upload bem-sucedido:", res.data.url);
-      return res.data.url;
+    return res.data.url;
     } catch (error: any) {
       console.error("❌ [UPLOAD] Erro ao fazer upload:", error);
       console.error("❌ [UPLOAD] Resposta:", error.response?.data);
