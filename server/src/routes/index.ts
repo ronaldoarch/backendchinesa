@@ -12,6 +12,9 @@ import { statsRouter } from "./stats";
 import { trackingRouter } from "./tracking";
 import { bonusesRouter } from "./bonuses";
 import { rewardsRouter } from "./rewards";
+import { managersRouter } from "./managers";
+import { affiliatesRouter } from "./affiliates";
+import { commissionsRouter } from "./commissions";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -187,6 +190,12 @@ apiRouter.use("/tracking", trackingRouter);
 apiRouter.use("/bonuses", bonusesRouter);
 // Recompensas (proteção aplicada no próprio router)
 apiRouter.use("/rewards", rewardsRouter);
+// Gerentes (proteção aplicada no próprio router)
+apiRouter.use("/managers", managersRouter);
+// Afiliados (proteção aplicada no próprio router)
+apiRouter.use("/affiliates", affiliatesRouter);
+// Comissões (proteção aplicada no próprio router)
+apiRouter.use("/commissions", commissionsRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);

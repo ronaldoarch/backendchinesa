@@ -343,6 +343,91 @@ export async function initDb() {
       console.warn("⚠️ Aviso ao verificar/adicionar colunas VIP:", error.message);
     }
 
+    // Adicionar coluna user_type se não existir
+    try {
+      const [userTypeColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'user_type'`
+      );
+      
+      if (!userTypeColumns || userTypeColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN user_type ENUM('user', 'affiliate', 'manager', 'admin') DEFAULT 'user'
+        `);
+        console.log("✅ Coluna user_type adicionada à tabela users");
+      }
+    } catch (error: any) {
+      console.warn("⚠️ Aviso ao verificar/adicionar coluna user_type:", error.message);
+    }
+
+    // Tabela de afiliados
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS affiliates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        manager_id INT NOT NULL,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        referral_link VARCHAR(255) NOT NULL,
+        commission_rate DECIMAL(5,2) DEFAULT 5.00,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_manager_id (manager_id),
+        INDEX idx_code (code)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela de comissões
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS commissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        affiliate_id INT NOT NULL,
+        manager_id INT NOT NULL,
+        user_id INT NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        total_bet DECIMAL(10,2) DEFAULT 0,
+        total_win DECIMAL(10,2) DEFAULT 0,
+        net_result DECIMAL(10,2) DEFAULT 0,
+        affiliate_commission DECIMAL(10,2) DEFAULT 0,
+        manager_commission DECIMAL(10,2) DEFAULT 0,
+        status ENUM('pending', 'approved', 'paid') DEFAULT 'pending',
+        paid_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE CASCADE,
+        FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_affiliate_id (affiliate_id),
+        INDEX idx_manager_id (manager_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_period (period_start, period_end),
+        INDEX idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela para rastrear usuários referenciados por afiliados
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS affiliate_referrals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        affiliate_id INT NOT NULL,
+        referred_user_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (affiliate_id) REFERENCES affiliates(id) ON DELETE CASCADE,
+        FOREIGN KEY (referred_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_referral (affiliate_id, referred_user_id),
+        INDEX idx_affiliate_id (affiliate_id),
+        INDEX idx_referred_user_id (referred_user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // eslint-disable-next-line no-console
     console.log("✅ Banco de dados MySQL conectado e tabelas criadas com sucesso!");
   } catch (error) {

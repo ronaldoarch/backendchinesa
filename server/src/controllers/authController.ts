@@ -15,7 +15,8 @@ const registerSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(6),
   phone: z.string().optional(),
-  currency: z.string().default("BRL")
+  currency: z.string().default("BRL"),
+  referralCode: z.string().optional()
 });
 
 const loginSchema = z.object({
@@ -30,7 +31,7 @@ export async function registerController(req: Request, res: Response): Promise<v
     return;
   }
 
-  const { username, password, phone, currency } = parsed.data;
+  const { username, password, phone, currency, referralCode } = parsed.data;
 
   // Verificar se usu?rio j? existe
   console.log("🔍 [REGISTER] Verificando se usuário já existe:", username);
@@ -47,9 +48,33 @@ export async function registerController(req: Request, res: Response): Promise<v
   console.log("✅ [REGISTER] Usuário não existe, pode criar");
 
   try {
-    console.log("📝 [REGISTER] Tentando criar usuário:", { username, hasPhone: !!phone, currency });
+    const { referralCode } = parsed.data;
+    console.log("📝 [REGISTER] Tentando criar usuário:", { username, hasPhone: !!phone, currency, referralCode });
     const user = await createUser(username, password, phone, currency);
     console.log("✅ [REGISTER] Usuário criado:", { id: user.id, username: user.username });
+
+    // Rastrear referência se código fornecido
+    if (referralCode) {
+      try {
+        const { pool } = await import("../config/database");
+        const [affiliates] = await pool.query<any[]>(
+          "SELECT id FROM affiliates WHERE code = ? AND active = true",
+          [referralCode.toUpperCase()]
+        );
+
+        if (affiliates && affiliates.length > 0) {
+          const affiliateId = affiliates[0].id;
+          await pool.query(
+            "INSERT INTO affiliate_referrals (affiliate_id, referred_user_id) VALUES (?, ?)",
+            [affiliateId, user.id]
+          );
+          console.log("✅ [REGISTER] Referência registrada:", { affiliateId, userId: user.id });
+        }
+      } catch (error: any) {
+        console.error("⚠️ [REGISTER] Erro ao rastrear referência (não crítico):", error.message);
+        // Não falhar o registro se houver erro ao rastrear referência
+      }
+    }
     
     const token = generateToken(user);
     console.log("🔑 [REGISTER] Token gerado");
@@ -60,7 +85,8 @@ export async function registerController(req: Request, res: Response): Promise<v
         username: user.username,
         phone: user.phone,
         currency: user.currency,
-        is_admin: user.is_admin
+        is_admin: user.is_admin,
+        user_type: user.user_type || "user"
       },
       token
     });
@@ -146,7 +172,8 @@ export async function loginController(req: Request, res: Response): Promise<void
         username: user.username,
         phone: user.phone,
         currency: user.currency,
-        is_admin: user.is_admin
+        is_admin: user.is_admin,
+        user_type: user.user_type || "user"
       },
       token
     };
@@ -194,7 +221,8 @@ export async function meController(req: Request, res: Response): Promise<void> {
     document: user.document,
     currency: user.currency,
     balance: user.balance || 0,
-    is_admin: user.is_admin
+    is_admin: user.is_admin,
+    user_type: user.user_type || "user"
   });
 }
 

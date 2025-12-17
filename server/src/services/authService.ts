@@ -13,6 +13,7 @@ export type User = {
   currency: string;
   balance?: number;
   is_admin: boolean;
+  user_type?: string;
   created_at: Date;
 };
 
@@ -122,7 +123,7 @@ export async function findUserByUsername(username: string): Promise<UserWithPass
 
 export async function findUserById(id: number): Promise<User | null> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    "SELECT id, username, phone, email, document, currency, COALESCE(balance, 0) as balance, is_admin, created_at FROM users WHERE id = ?",
+    "SELECT id, username, phone, email, document, currency, COALESCE(balance, 0) as balance, is_admin, COALESCE(user_type, 'user') as user_type, created_at FROM users WHERE id = ?",
     [id]
   );
 
@@ -135,7 +136,8 @@ export async function findUserById(id: number): Promise<User | null> {
   return {
     ...row,
     balance: Number(row.balance || 0),
-    is_admin: Boolean(row.is_admin === 1 || row.is_admin === true)
+    is_admin: Boolean(row.is_admin === 1 || row.is_admin === true),
+    user_type: row.user_type || "user"
   } as User;
 }
 
