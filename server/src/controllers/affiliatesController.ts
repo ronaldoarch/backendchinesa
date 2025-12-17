@@ -59,7 +59,7 @@ export async function createAffiliateController(req: Request, res: Response): Pr
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Gerar código único para o afiliado
-    let code: string;
+    let code = "";
     let codeExists = true;
     while (codeExists) {
       code = crypto.randomBytes(4).toString("hex").toUpperCase();
