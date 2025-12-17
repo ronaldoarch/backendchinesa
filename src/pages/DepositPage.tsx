@@ -179,37 +179,79 @@ export function DepositPage() {
           }}>
             <h3 style={{ marginTop: 0, color: "var(--gold)" }}>Pagamento criado com sucesso!</h3>
             
-            {selectedMethod === "PIX" && transaction.qrCode && (
+            {selectedMethod === "PIX" && (
               <div>
-                <p>Escaneie o QR Code abaixo para pagar:</p>
-                {transaction.qrCodeBase64 ? (
-                  <img
-                    src={`data:image/png;base64,${transaction.qrCodeBase64}`}
-                    alt="QR Code PIX"
-                    style={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      margin: "16px 0",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "8px"
-                    }}
-                  />
+                {transaction.qrCode || transaction.qrCodeBase64 ? (
+                  <>
+                    <p>Escaneie o QR Code abaixo para pagar:</p>
+                    {transaction.qrCodeBase64 ? (
+                      <img
+                        src={`data:image/png;base64,${transaction.qrCodeBase64}`}
+                        alt="QR Code PIX"
+                        style={{
+                          maxWidth: "100%",
+                          height: "auto",
+                          margin: "16px 0",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px"
+                        }}
+                      />
+                    ) : transaction.qrCode ? (
+                      <div style={{
+                        padding: "16px",
+                        background: "#fff",
+                        borderRadius: "8px",
+                        margin: "16px 0",
+                        wordBreak: "break-all",
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        color: "#000"
+                      }}>
+                        <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>Código PIX (Copiar e Colar):</p>
+                        <p style={{ margin: 0 }}>{transaction.qrCode}</p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(transaction.qrCode || "");
+                            alert("Código PIX copiado!");
+                          }}
+                          style={{
+                            marginTop: "8px",
+                            padding: "8px 16px",
+                            background: "var(--gold)",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontWeight: "bold"
+                          }}
+                        >
+                          Copiar Código
+                        </button>
+                      </div>
+                    ) : null}
+                    {transaction.dueDate && (
+                      <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "8px" }}>
+                        Vencimento: {new Date(transaction.dueDate).toLocaleDateString("pt-BR")}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <div style={{
-                    padding: "16px",
-                    background: "#fff",
-                    borderRadius: "8px",
-                    margin: "16px 0",
-                    wordBreak: "break-all",
-                    fontFamily: "monospace",
-                    fontSize: "12px"
+                    padding: "12px",
+                    background: "rgba(255, 0, 0, 0.1)",
+                    border: "1px solid rgba(255, 0, 0, 0.3)",
+                    borderRadius: "4px",
+                    margin: "16px 0"
                   }}>
-                    {transaction.qrCode}
+                    <p style={{ margin: 0, color: "#ff6b6b" }}>
+                      ⚠️ QR Code não disponível. Verifique os logs do servidor.
+                    </p>
+                    <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "var(--text-muted)" }}>
+                      Debug: qrCode={transaction.qrCode ? "presente" : "ausente"}, 
+                      qrCodeBase64={transaction.qrCodeBase64 ? "presente" : "ausente"}
+                    </p>
                   </div>
                 )}
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "8px" }}>
-                  Vencimento: {transaction.dueDate ? new Date(transaction.dueDate).toLocaleDateString("pt-BR") : "N/A"}
-                </p>
               </div>
             )}
 
