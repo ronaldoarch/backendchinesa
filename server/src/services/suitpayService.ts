@@ -239,9 +239,9 @@ export type SuitPayPixRequest = {
   callbackUrl?: string;
   client: {
     name: string;
-    document?: string;
-    email?: string;
-    phone?: string;
+    document: string; // CPF/CNPJ - obrigatório
+    email: string; // obrigatório
+    phoneNumber?: string; // DDD+TELEFONE (opcional)
   };
 };
 
@@ -330,7 +330,7 @@ export const suitpayService = {
 
   /**
    * Criar pagamento PIX
-   * POST /api/v1/gateway/pix
+   * POST /api/v1/gateway/request-qrcode
    */
   async createPixPayment(request: SuitPayPixRequest): Promise<SuitPayResponse<SuitPayPixResponse>> {
     // URL base (já corrigida para ws.suitpay.app)
@@ -342,7 +342,7 @@ export const suitpayService = {
       console.log(`[SuitPay] Iniciando criação de pagamento PIX:`, {
         requestNumber: request.requestNumber,
         amount: request.amount,
-        url: `${baseUrl}/api/v1/gateway/pix`,
+        url: `${baseUrl}/api/v1/gateway/request-qrcode`,
         hasClientId: !!creds.clientId,
         hasClientSecret: !!creds.clientSecret,
         clientIdPrefix: creds.clientId ? creds.clientId.substring(0, 10) + "..." : "não configurado"
@@ -358,10 +358,10 @@ export const suitpayService = {
       }
 
       const client = await createClient();
-      console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${baseUrl}/api/v1/gateway/pix`);
+      console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${baseUrl}/api/v1/gateway/request-qrcode`);
       console.log(`[SuitPay] Payload da requisição:`, JSON.stringify(request, null, 2));
 
-      const { data } = await client.post<SuitPayPixResponse>("/api/v1/gateway/pix", request);
+      const { data } = await client.post<SuitPayPixResponse>("/api/v1/gateway/request-qrcode", request);
       console.log(`[SuitPay] Resposta recebida:`, JSON.stringify(data, null, 2));
       console.log(`✅ Pagamento PIX criado: ${request.requestNumber}`);
       return {

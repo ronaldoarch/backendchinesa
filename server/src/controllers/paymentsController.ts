@@ -12,9 +12,9 @@ const pixRequestSchema = z.object({
   dueDate: z.string().optional(),
   client: z.object({
     name: z.string(),
-    document: z.string().optional(),
-    email: z.string().email().optional(),
-    phone: z.string().optional()
+    document: z.string(), // CPF/CNPJ - obrigatório
+    email: z.string().email(), // obrigatório
+    phone: z.string().optional() // será mapeado para phoneNumber
   }),
 });
 
@@ -96,11 +96,17 @@ export async function createPixPaymentController(req: Request, res: Response): P
     const callbackUrl = `${baseUrl}/api/payments/webhook`;
 
     // Criar requisição para SuitPay
+    // Mapear phone para phoneNumber (conforme documentação SuitPay)
     const suitpayRequest: SuitPayPixRequest = {
       requestNumber,
       dueDate: expirationDate,
       amount,
-      client,
+      client: {
+        name: client.name,
+        document: client.document,
+        email: client.email,
+        phoneNumber: client.phone // mapear phone para phoneNumber
+      },
       callbackUrl
     };
 
