@@ -359,8 +359,10 @@ export const suitpayService = {
 
       const client = await createClient();
       console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${baseUrl}/pix`);
+      console.log(`[SuitPay] Payload da requisição:`, JSON.stringify(request, null, 2));
 
       const { data } = await client.post<SuitPayPixResponse>("/pix", request);
+      console.log(`[SuitPay] Resposta recebida:`, JSON.stringify(data, null, 2));
       console.log(`✅ Pagamento PIX criado: ${request.requestNumber}`);
       return {
         success: true,
@@ -371,6 +373,9 @@ export const suitpayService = {
       console.error("❌ Erro ao criar pagamento PIX:", error.message);
       console.error("❌ Código do erro:", error.code);
       console.error("❌ URL tentada:", baseUrl);
+      console.error("❌ Status HTTP:", error.response?.status);
+      console.error("❌ Resposta completa da API:", JSON.stringify(error.response?.data, null, 2));
+      console.error("❌ Headers da resposta:", error.response?.headers);
       console.error("❌ Stack completo:", error.stack);
 
       // Verificar se é erro de DNS (pode estar em error.code ou na mensagem)
@@ -390,27 +395,61 @@ export const suitpayService = {
         };
       }
 
-      if (error.response?.status === 401) {
+      // Se houver resposta da API, tentar extrair mensagem de erro
+      if (error.response) {
+        const status = error.response.status;
+        const responseData = error.response.data || {};
+        
+        // Tentar diferentes campos onde a mensagem de erro pode estar
+        const errorMessage = 
+          responseData.message ||
+          responseData.error ||
+          responseData.msg ||
+          responseData.errorMessage ||
+          responseData.description ||
+          (typeof responseData === "string" ? responseData : null) ||
+          `Erro HTTP ${status}`;
+
+        console.error(`[SuitPay] ❌ Erro da API (${status}):`, errorMessage);
+        console.error(`[SuitPay] ❌ Dados completos:`, responseData);
+
+        if (status === 401) {
+          return {
+            success: false,
+            error: "Credenciais inválidas",
+            message: "Verifique se as credenciais SuitPay estão corretas. Status: 401"
+          };
+        }
+
+        if (status === 400) {
+          return {
+            success: false,
+            error: errorMessage || "Erro na solicitação",
+            message: errorMessage || "Verifique os dados enviados. Status: 400"
+          };
+        }
+
+        if (status === 500) {
+          return {
+            success: false,
+            error: errorMessage || "Erro interno do servidor SuitPay",
+            message: errorMessage || "O servidor SuitPay retornou um erro interno. Tente novamente mais tarde."
+          };
+        }
+
+        // Outros status codes
         return {
           success: false,
-          error: "Credenciais inválidas",
-          message: "Verifique se as credenciais SuitPay estão corretas"
+          error: errorMessage || `Erro HTTP ${status}`,
+          message: errorMessage || `Erro ao criar pagamento PIX. Status: ${status}`
         };
       }
 
-      if (error.response?.status === 400) {
-        const errorMsg = error.response?.data?.message || "Erro na solicitação";
-        return {
-          success: false,
-          error: errorMsg,
-          message: "Verifique os dados enviados"
-        };
-      }
-
+      // Se não houver resposta (erro de rede, timeout, etc)
       return {
         success: false,
-        error: error.response?.data?.message || error.message || "Erro ao criar pagamento PIX",
-        message: error.response?.data?.message || "Erro ao criar pagamento PIX"
+        error: error.message || "Erro ao criar pagamento PIX",
+        message: error.message || "Não foi possível conectar ao gateway de pagamento. Verifique sua conexão."
       };
     }
   },
