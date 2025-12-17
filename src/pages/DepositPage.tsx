@@ -104,6 +104,12 @@ export function DepositPage() {
       }
 
       if (response.data.success && response.data.transaction) {
+        console.log("💰 [DEPOSIT] Transação recebida:", {
+          hasQrCode: !!response.data.transaction.qrCode,
+          hasQrCodeBase64: !!response.data.transaction.qrCodeBase64,
+          qrCode: response.data.transaction.qrCode ? response.data.transaction.qrCode.substring(0, 50) + "..." : null,
+          status: response.data.transaction.status
+        });
         setTransaction(response.data.transaction);
         setAmount("");
 

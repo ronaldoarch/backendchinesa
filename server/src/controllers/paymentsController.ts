@@ -238,18 +238,29 @@ export async function createPixPaymentController(req: Request, res: Response): P
       updatedTransaction = null; // Usar dados do result se falhar
     }
 
+    // Preparar resposta final
+    const finalTransaction = updatedTransaction || {
+      id: transaction.id,
+      requestNumber,
+      transactionId: result.data.transactionId,
+      qrCode: result.data.qrCode,
+      qrCodeBase64: result.data.qrCodeBase64,
+      amount: result.data.amount || amount,
+      dueDate: result.data.dueDate || expirationDate,
+      status: result.data.status || "PENDING"
+    };
+
+    console.log(`[PIX] 📤 Enviando resposta para frontend:`, {
+      requestNumber,
+      hasQrCode: !!finalTransaction.qrCode,
+      hasQrCodeBase64: !!finalTransaction.qrCodeBase64,
+      qrCodeLength: finalTransaction.qrCode?.length || 0,
+      qrCodeBase64Length: finalTransaction.qrCodeBase64?.length || 0
+    });
+
     res.status(201).json({
       success: true,
-      transaction: updatedTransaction || {
-        id: transaction.id,
-        requestNumber,
-        transactionId: result.data.transactionId,
-        qrCode: result.data.qrCode,
-        qrCodeBase64: result.data.qrCodeBase64,
-        amount: result.data.amount || amount,
-        dueDate: result.data.dueDate || expirationDate,
-        status: result.data.status || "PENDING"
-      }
+      transaction: finalTransaction
     });
   } catch (error: any) {
     console.error("❌ Erro ao criar pagamento PIX:", error);
