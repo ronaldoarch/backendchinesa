@@ -1,0 +1,49 @@
+# Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+dist-client/
+dist-server/
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+env.hostinger
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads
+server/uploads/
+uploads/
+
+# Logs
+logs/
+*.log
+server.log
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporários
+.cache/
+temp/
+tmp/
+
+# Documentação local (não precisa no GitHub)
+COMANDOS_RAPIDOS.txt
+CREDENCIAIS_SSH.txt
+deploy.sh
