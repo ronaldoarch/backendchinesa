@@ -76,6 +76,7 @@ export function App() {
           // Garantir que is_admin seja boolean
           const updatedUser = {
             ...response.data,
+            balance: response.data.balance || 0, // Garantir que balance esteja presente
             is_admin: Boolean(
               response.data.is_admin === true || 
               response.data.is_admin === 1 || 
@@ -83,6 +84,7 @@ export function App() {
               response.data.is_admin === "1"
             )
           };
+          console.log("💰 [APP] Usuário atualizado com saldo:", updatedUser.balance);
           // Atualizar estado e localStorage
           setUser(updatedUser);
           saveUserToStorage(updatedUser);
@@ -139,14 +141,12 @@ export function App() {
         <div className="top-bar-right">
           {user && user.username ? (
             <>
-              {user.balance !== undefined && (
-                <span className="user-balance">
-                  R$ {new Intl.NumberFormat("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }).format(user.balance)}
-                </span>
-              )}
+              <span className="user-balance">
+                R$ {new Intl.NumberFormat("pt-BR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                }).format(user.balance || 0)}
+              </span>
               <span className="user-pill">Olá, {user.username}</span>
               {(user.is_admin === true || user.is_admin === "true" || user.is_admin === 1 || user.is_admin === "1") && (
                 <NavLink 
