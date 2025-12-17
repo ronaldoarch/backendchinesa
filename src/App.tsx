@@ -111,12 +111,53 @@ export function App() {
       const savedUser = getUser();
       const token = localStorage.getItem("token");
       if (token && savedUser) {
-        setUser(savedUser);
+        // Atualizar dados do usuário incluindo saldo
+        api.get("/auth/me")
+          .then((response) => {
+            const updatedUser = {
+              ...response.data,
+              balance: response.data.balance || 0,
+              is_admin: Boolean(
+                response.data.is_admin === true || 
+                response.data.is_admin === 1 || 
+                response.data.is_admin === "true" ||
+                response.data.is_admin === "1"
+              )
+            };
+            setUser(updatedUser);
+            saveUserToStorage(updatedUser);
+          })
+          .catch(() => {
+            setUser(savedUser);
+          });
       } else {
         setUser(null);
       }
     }
   }, [authOpen]);
+
+  // Atualizar saldo quando a rota mudar (após depósitos, etc)
+  useEffect(() => {
+    if (user && user.id) {
+      // Atualizar saldo periodicamente ou quando necessário
+      const updateBalance = async () => {
+        try {
+          const response = await api.get("/auth/me");
+          if (response.data.balance !== undefined) {
+            setUser(prev => prev ? { ...prev, balance: response.data.balance || 0 } : null);
+            saveUserToStorage({ ...user, balance: response.data.balance || 0 });
+          }
+        } catch (error) {
+          console.error("Erro ao atualizar saldo:", error);
+        }
+      };
+
+      // Atualizar saldo quando a rota mudar para /deposito ou /perfil
+      if (location.pathname === "/deposito" || location.pathname === "/perfil") {
+        updateBalance();
+      }
+    }
+  }, [location.pathname, user?.id]);
 
   return (
     <div className={`app-root${isAdmin ? " app-root-admin" : ""}`}>
