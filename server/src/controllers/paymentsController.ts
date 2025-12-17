@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { RowDataPacket } from "mysql2";
 import { suitpayService, SuitPayPixRequest, SuitPayCardRequest, SuitPayBoletoRequest } from "../services/suitpayService";
 import { createTransaction, updateTransactionStatus, updateUserBalance, findTransactionByRequestNumber, listUserTransactions } from "../services/transactionsService";
 import { applyBonusToDeposit } from "../services/bonusService";
@@ -85,6 +86,39 @@ export async function createPixPaymentController(req: Request, res: Response): P
 
     const { amount, dueDate, client } = parsed.data;
 
+    // Buscar dados do usuário do banco se document ou email não foram fornecidos
+    let userDocument = client.document;
+    let userEmail = client.email;
+    let userName = client.name;
+    let userPhone = client.phone;
+
+    if (!userDocument || !userEmail) {
+      try {
+        const [userRows] = await pool.query<RowDataPacket[]>(
+          "SELECT username, email, document, phone FROM users WHERE id = ?",
+          [userId]
+        );
+        if (userRows.length > 0) {
+          const userData = userRows[0];
+          userName = userName || userData.username || "Cliente";
+          userEmail = userEmail || userData.email || "";
+          userDocument = userDocument || userData.document || "";
+          userPhone = userPhone || userData.phone || undefined;
+        }
+      } catch (error) {
+        console.error("❌ Erro ao buscar dados do usuário:", error);
+      }
+    }
+
+    // Validar campos obrigatórios
+    if (!userDocument || !userEmail) {
+      res.status(400).json({ 
+        error: "Dados incompletos", 
+        message: "É necessário informar CPF/CNPJ e e-mail. Complete seu perfil primeiro." 
+      });
+      return;
+    }
+
     // Gerar requestNumber único
     const requestNumber = uuidv4();
 
@@ -102,10 +136,10 @@ export async function createPixPaymentController(req: Request, res: Response): P
       dueDate: expirationDate,
       amount,
       client: {
-        name: client.name,
-        document: client.document,
-        email: client.email,
-        phoneNumber: client.phone // mapear phone para phoneNumber
+        name: userName,
+        document: userDocument,
+        email: userEmail,
+        phoneNumber: userPhone // mapear phone para phoneNumber
       },
       callbackUrl
     };
