@@ -1,0 +1,23 @@
+# Configuração Nixpacks para aplicação Node.js + TypeScript
+# Forçar detecção como aplicação Node.js
+
+[variables]
+NODE_VERSION = "22"
+
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = [
+  "npm ci --omit=dev",
+  "npm run build:server"
+]
+
+[phases.build]
+cmds = [
+  "mkdir -p server/uploads",
+  "mkdir -p dist-client"
+]
+
+[start]
+cmd = "npx ts-node server/src/server.ts"
