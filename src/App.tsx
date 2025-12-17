@@ -20,7 +20,7 @@ import { UtmfyTracker } from "./components/UtmfyTracker";
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState<{ username: string; id: number; is_admin: boolean } | null>(null);
+  const [user, setUser] = useState<{ username: string; id: number; is_admin: boolean; balance?: number } | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
   const [loading, setLoading] = useState(true);
@@ -139,6 +139,14 @@ export function App() {
         <div className="top-bar-right">
           {user && user.username ? (
             <>
+              {user.balance !== undefined && (
+                <span className="user-balance">
+                  R$ {new Intl.NumberFormat("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  }).format(user.balance)}
+                </span>
+              )}
               <span className="user-pill">Olá, {user.username}</span>
               {(user.is_admin === true || user.is_admin === "true" || user.is_admin === 1 || user.is_admin === "1") && (
                 <NavLink 
