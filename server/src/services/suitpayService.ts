@@ -245,14 +245,23 @@ export type SuitPayPixRequest = {
   };
 };
 
+// Resposta real da API SuitPay (conforme documentação)
+export type SuitPayPixApiResponse = {
+  idTransaction: string;
+  paymentCode: string; // Código de pagamento gerado (QrCode)
+  paymentCodeBase64?: string; // Imagem do qrCode na base64
+  response: string; // Mensagem de retorno
+};
+
+// Tipo interno usado pela aplicação
 export type SuitPayPixResponse = {
   requestNumber: string;
-  qrCode: string;
-  qrCodeBase64?: string;
+  qrCode: string; // mapeado de paymentCode
+  qrCodeBase64?: string; // mapeado de paymentCodeBase64
   dueDate: string;
   amount: number;
   status?: string;
-  transactionId?: string;
+  transactionId?: string; // mapeado de idTransaction
 };
 
 export type SuitPayCardRequest = {
@@ -361,12 +370,26 @@ export const suitpayService = {
       console.log(`[SuitPay] Cliente criado, fazendo requisição POST para: ${baseUrl}/api/v1/gateway/request-qrcode`);
       console.log(`[SuitPay] Payload da requisição:`, JSON.stringify(request, null, 2));
 
-      const { data } = await client.post<SuitPayPixResponse>("/api/v1/gateway/request-qrcode", request);
-      console.log(`[SuitPay] Resposta recebida:`, JSON.stringify(data, null, 2));
+      const { data: apiResponse } = await client.post<SuitPayPixApiResponse>("/api/v1/gateway/request-qrcode", request);
+      console.log(`[SuitPay] Resposta recebida da API:`, JSON.stringify(apiResponse, null, 2));
+      
+      // Mapear resposta da API SuitPay para formato interno
+      const mappedResponse: SuitPayPixResponse = {
+        requestNumber: request.requestNumber,
+        qrCode: apiResponse.paymentCode, // paymentCode -> qrCode
+        qrCodeBase64: apiResponse.paymentCodeBase64, // paymentCodeBase64 -> qrCodeBase64
+        dueDate: request.dueDate,
+        amount: request.amount,
+        status: apiResponse.response === "OK" ? "PENDING" : "FAILED",
+        transactionId: apiResponse.idTransaction // idTransaction -> transactionId
+      };
+      
+      console.log(`[SuitPay] Resposta mapeada:`, JSON.stringify(mappedResponse, null, 2));
       console.log(`✅ Pagamento PIX criado: ${request.requestNumber}`);
+      
       return {
         success: true,
-        data,
+        data: mappedResponse,
         message: "Pagamento PIX criado com sucesso"
       };
     } catch (error: any) {
