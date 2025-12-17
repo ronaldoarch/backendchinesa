@@ -11,6 +11,7 @@ import { paymentsRouter } from "./payments";
 import { statsRouter } from "./stats";
 import { trackingRouter } from "./tracking";
 import { bonusesRouter } from "./bonuses";
+import { rewardsRouter } from "./rewards";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -184,6 +185,8 @@ apiRouter.use("/stats", statsRouter);
 apiRouter.use("/tracking", trackingRouter);
 // Bônus (proteção aplicada no próprio router)
 apiRouter.use("/bonuses", bonusesRouter);
+// Recompensas (proteção aplicada no próprio router)
+apiRouter.use("/rewards", rewardsRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);

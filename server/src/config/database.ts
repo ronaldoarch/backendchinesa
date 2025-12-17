@@ -188,7 +188,7 @@ export async function initDb() {
         user_id INT NOT NULL,
         request_number VARCHAR(255) UNIQUE NOT NULL,
         transaction_id VARCHAR(255),
-        payment_method ENUM('PIX', 'CARD', 'BOLETO') NOT NULL,
+        payment_method ENUM('PIX', 'CARD', 'BOLETO', 'BONUS', 'GAME_BET') NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'PENDING',
         qr_code TEXT,
@@ -243,6 +243,25 @@ export async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_type (type),
         INDEX idx_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela de recompensas de usuários
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS user_rewards (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        reward_id VARCHAR(255) NOT NULL,
+        bonus_amount DECIMAL(10, 2) DEFAULT 0,
+        redeemed BOOLEAN DEFAULT false,
+        redeemed_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_user_reward (user_id, reward_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_reward_id (reward_id),
+        INDEX idx_redeemed (redeemed)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 

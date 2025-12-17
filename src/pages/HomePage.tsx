@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { GameCard } from "../components/GameCard";
-import { api } from "../services/api";
+import { api, getUser } from "../services/api";
 
 type Game = {
   id: number;
@@ -94,6 +94,8 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>("popular");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [showOfferPopup, setShowOfferPopup] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   // Carregar favoritos do localStorage
   useEffect(() => {
@@ -104,6 +106,20 @@ export function HomePage() {
         setFavorites(new Set(favArray));
       } catch (error) {
         console.error("Erro ao carregar favoritos:", error);
+      }
+    }
+  }, []);
+
+  // Verificar se deve mostrar popup de ofertas
+  useEffect(() => {
+    const savedUser = getUser();
+    if (savedUser) {
+      setUser(savedUser);
+      // Verificar se já mostrou o popup hoje
+      const lastPopupDate = localStorage.getItem("offerPopupDate");
+      const today = new Date().toDateString();
+      if (lastPopupDate !== today) {
+        setShowOfferPopup(true);
       }
     }
   }, []);
@@ -239,6 +255,137 @@ export function HomePage() {
 
   return (
     <div className="home-layout">
+      {/* Popup de Ofertas */}
+      {showOfferPopup && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px"
+          }}
+          onClick={() => {
+            setShowOfferPopup(false);
+            localStorage.setItem("offerPopupDate", new Date().toDateString());
+          }}
+        >
+          <div 
+            style={{
+              background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+              border: "2px solid var(--gold)",
+              borderRadius: "16px",
+              padding: "24px",
+              maxWidth: "400px",
+              width: "100%",
+              position: "relative",
+              boxShadow: "0 8px 32px rgba(246, 196, 83, 0.3)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowOfferPopup(false);
+                localStorage.setItem("offerPopupDate", new Date().toDateString());
+              }}
+              style={{
+                position: "absolute",
+                top: "12px",
+                right: "12px",
+                background: "transparent",
+                border: "none",
+                color: "var(--gold)",
+                fontSize: "24px",
+                cursor: "pointer",
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              ×
+            </button>
+            
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <h2 style={{ 
+                color: "var(--gold)", 
+                margin: "0 0 8px 0",
+                fontSize: "24px",
+                fontWeight: "bold"
+              }}>
+                🎁 Oferta Especial!
+              </h2>
+              <p style={{ color: "var(--text-main)", margin: 0, fontSize: "14px" }}>
+                Resgate seu bônus exclusivo
+              </p>
+            </div>
+
+            <div style={{
+              background: "rgba(246, 196, 83, 0.1)",
+              border: "1px solid var(--gold)",
+              borderRadius: "12px",
+              padding: "16px",
+              marginBottom: "20px"
+            }}>
+              <h3 style={{ 
+                color: "var(--gold)", 
+                margin: "0 0 8px 0",
+                fontSize: "18px"
+              }}>
+                💰 Baú de 30 reais
+              </h3>
+              <p style={{ 
+                color: "var(--text-main)", 
+                margin: "0 0 12px 0",
+                fontSize: "14px",
+                lineHeight: "1.5"
+              }}>
+                Aposte R$ 100,00 e ganhe R$ 30,00 de bônus!
+              </p>
+              <button
+                onClick={() => {
+                  window.location.href = "/promocoes?tab=recompensas";
+                  setShowOfferPopup(false);
+                  localStorage.setItem("offerPopupDate", new Date().toDateString());
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: "var(--gold)",
+                  color: "#000",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  transition: "opacity 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = "0.9"}
+                onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+              >
+                Ver Ofertas
+              </button>
+            </div>
+
+            <p style={{ 
+              color: "var(--text-muted)", 
+              fontSize: "12px",
+              textAlign: "center",
+              margin: 0
+            }}>
+              Esta oferta aparece uma vez por dia
+            </p>
+          </div>
+        </div>
+      )}
+
       {activeBanners.length > 0 ? (
         <section
           className="banner"

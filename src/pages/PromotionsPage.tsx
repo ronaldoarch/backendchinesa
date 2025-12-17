@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "../services/api";
+import { api, getUser } from "../services/api";
 
 type Props = {
   user: { username: string } | null;
@@ -140,14 +140,63 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
 }
 
 function TarefaView() {
-  const tasks = [
-    { title: "Definir aniversário", bonus: "1,00" },
-    { title: "Definir senha de saque", bonus: "1,00" },
-    { title: "Adicionar conta de saque", bonus: "1,00" },
-    { title: "Definir avatar", bonus: "1,00" },
-    { title: "Adicionar conta de email", bonus: "3,00" },
-    { title: "Primeira retirada", bonus: "1,00" }
-  ];
+  const [tasks, setTasks] = useState([
+    { id: "birthday", title: "Definir aniversário", bonus: "1,00", completed: false },
+    { id: "withdraw_password", title: "Definir senha de saque", bonus: "1,00", completed: false },
+    { id: "withdraw_account", title: "Adicionar conta de saque", bonus: "1,00", completed: false },
+    { id: "avatar", title: "Definir avatar", bonus: "1,00", completed: false },
+    { id: "email", title: "Adicionar conta de email", bonus: "3,00", completed: false },
+    { id: "first_withdraw", title: "Primeira retirada", bonus: "1,00", completed: false },
+    { id: "treasure_100", title: "Baú de 30 reais para 100 apostados", bonus: "30,00", completed: false, requiredBet: 100 }
+  ]);
+  
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  async function loadUserData() {
+    try {
+      const response = await api.get("/auth/me");
+      setUser(response.data);
+      
+      // Verificar status das tarefas
+      const updatedTasks = await Promise.all(
+        tasks.map(async (task) => {
+          if (task.id === "treasure_100") {
+            // Verificar se já resgatou ou se atingiu 100 em apostas
+            const rewardStatus = await api.get(`/rewards/status/${task.id}`).catch(() => null);
+            return {
+              ...task,
+              completed: rewardStatus?.data?.redeemed || false,
+              progress: rewardStatus?.data?.totalBet || 0,
+              canRedeem: (rewardStatus?.data?.totalBet || 0) >= 100 && !rewardStatus?.data?.redeemed
+            };
+          }
+          return task;
+        })
+      );
+      setTasks(updatedTasks);
+    } catch (error) {
+      console.error("Erro ao carregar dados do usuário:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRedeem(taskId: string) {
+    try {
+      const response = await api.post(`/rewards/redeem`, { rewardId: taskId });
+      if (response.data.success) {
+        alert(`Bônus de R$ ${tasks.find(t => t.id === taskId)?.bonus} resgatado com sucesso!`);
+        await loadUserData(); // Recarregar dados
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao resgatar recompensa");
+    }
+  }
 
   return (
     <div className="promos-tasks">
@@ -156,17 +205,35 @@ function TarefaView() {
         <button className="promos-filter-secondary">Histórico</button>
       </div>
       <div className="promos-cards-column">
-        {tasks.map((task) => (
-          <article key={task.title} className="promo-task-card">
-            <div>
-              <h3>{task.title}</h3>
-              <p className="promo-task-bonus">Bônus {task.bonus}</p>
-            </div>
-            <button type="button" className="promo-task-cta">
-              Resgatar
-            </button>
-          </article>
-        ))}
+        {loading ? (
+          <div className="promos-empty">Carregando recompensas...</div>
+        ) : (
+          tasks.map((task) => (
+            <article key={task.id} className="promo-task-card">
+              <div>
+                <h3>{task.title}</h3>
+                <p className="promo-task-bonus">Bônus R$ {task.bonus}</p>
+                {task.id === "treasure_100" && "progress" in task && (
+                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
+                    Progresso: R$ {task.progress?.toFixed(2) || "0,00"} / R$ 100,00
+                  </p>
+                )}
+              </div>
+              <button 
+                type="button" 
+                className="promo-task-cta"
+                onClick={() => handleRedeem(task.id)}
+                disabled={task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false))}
+                style={{
+                  opacity: task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false)) ? 0.5 : 1,
+                  cursor: task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false)) ? "not-allowed" : "pointer"
+                }}
+              >
+                {task.completed ? "Resgatado" : "Resgatar"}
+              </button>
+            </article>
+          ))
+        )}
       </div>
     </div>
   );
