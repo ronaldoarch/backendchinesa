@@ -1,11 +1,8 @@
 # Configuração Nixpacks para aplicação Node.js + TypeScript
-# Forçar detecção como aplicação Node.js
-
-[variables]
-NODE_VERSION = "22"
+# Node.js 22 será detectado automaticamente via engines.node no package.json
 
 [phases.setup]
-nixPkgs = ["nodejs_22"]
+nixPkgs = ["...", "nodejs"]
 
 [phases.install]
 cmds = [
