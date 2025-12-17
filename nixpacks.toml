@@ -1,8 +1,12 @@
 # Configuração Nixpacks para aplicação Node.js + TypeScript
-# Node.js 22 será detectado automaticamente via engines.node no package.json
+# Provider: Node.js (detectado automaticamente via package.json)
+# Node.js 22 será usado via engines.node no package.json
+
+[providers]
+node = true
 
 [phases.setup]
-nixPkgs = ["...", "nodejs"]
+nixPkgs = ["...", "nodejs-22_x"]
 
 [phases.install]
 cmds = [
