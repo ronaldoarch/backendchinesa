@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { GameCard } from "../components/GameCard";
 import { api, getUser } from "../services/api";
 
@@ -88,6 +89,7 @@ type Banner = {
 };
 
 export function HomePage() {
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -96,6 +98,8 @@ export function HomePage() {
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [showOfferPopup, setShowOfferPopup] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [offerPopupImage, setOfferPopupImage] = useState<string | null>(null);
+  const [settings, setSettings] = useState<any>({});
 
   // Carregar favoritos do localStorage
   useEffect(() => {
@@ -113,7 +117,8 @@ export function HomePage() {
   // Verificar se deve mostrar popup de ofertas
   useEffect(() => {
     const savedUser = getUser();
-    if (savedUser) {
+    const token = localStorage.getItem("token");
+    if (savedUser && token) {
       setUser(savedUser);
       // Verificar se já mostrou o popup hoje
       const lastPopupDate = localStorage.getItem("offerPopupDate");
@@ -128,7 +133,7 @@ export function HomePage() {
     void (async () => {
       try {
         console.log("🔄 Carregando dados da API...", api.defaults.baseURL);
-        const [gamesRes, providersRes, bannersRes] = await Promise.all([
+        const [gamesRes, providersRes, bannersRes, settingsRes] = await Promise.all([
           api.get<Game[]>("/games").catch((err) => {
             console.error("❌ Erro ao carregar jogos:", err.response?.status, err.message);
             throw err;
@@ -140,8 +145,25 @@ export function HomePage() {
           api.get<Banner[]>("/banners").catch((err) => {
             console.warn("⚠️ Erro ao carregar banners (continuando sem banners):", err.response?.status);
             return { data: [] };
+          }),
+          api.get<any>("/settings").catch((err) => {
+            console.warn("⚠️ Erro ao carregar settings (continuando sem settings):", err.response?.status);
+            return { data: {} };
           })
         ]);
+        
+        // Carregar imagem do popup de ofertas
+        const settingsData = settingsRes.data || {};
+        setSettings(settingsData);
+        if (settingsData["offerPopup.imageUrl"]) {
+          const imageUrl = settingsData["offerPopup.imageUrl"];
+          if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+            setOfferPopupImage(imageUrl);
+          } else {
+            const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
+            setOfferPopupImage(`${baseUrl}${imageUrl}`);
+          }
+        }
         console.log("✅ Dados carregados:", {
           games: gamesRes.data?.length || 0,
           providers: providersRes.data?.length || 0,
@@ -314,6 +336,23 @@ export function HomePage() {
             </button>
             
             <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              {offerPopupImage && (
+                <div style={{ marginBottom: "16px" }}>
+                  <img
+                    src={offerPopupImage}
+                    alt="Oferta Especial"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "200px",
+                      borderRadius: "12px",
+                      objectFit: "contain"
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
               <h2 style={{ 
                 color: "var(--gold)", 
                 margin: "0 0 8px 0",
@@ -351,9 +390,9 @@ export function HomePage() {
               </p>
               <button
                 onClick={() => {
-                  window.location.href = "/promocoes?tab=recompensas";
                   setShowOfferPopup(false);
                   localStorage.setItem("offerPopupDate", new Date().toDateString());
+                  navigate("/promocoes?tab=recompensas");
                 }}
                 style={{
                   width: "100%",
@@ -405,7 +444,7 @@ export function HomePage() {
         >
           {currentBanner?.imageUrl ? (
             <BannerImage
-              imageUrl={getImageUrl(currentBanner.imageUrl || "")}
+              imageUrl={getImageUrl(currentBanner.imageUrl || "") || ""}
               title={currentBanner.title}
               bannerId={currentBanner.id}
             />

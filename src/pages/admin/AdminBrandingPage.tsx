@@ -7,7 +7,8 @@ export function AdminBrandingPage() {
   const [settingsForm, setSettingsForm] = useState<Settings>({
     "branding.logoUrl": "",
     "branding.faviconUrl": "",
-    "branding.loadingBannerUrl": ""
+    "branding.loadingBannerUrl": "",
+    "offerPopup.imageUrl": ""
   });
   const [uploading, setUploading] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -20,7 +21,8 @@ export function AdminBrandingPage() {
         "branding.logoUrl": res.data["branding.logoUrl"] ?? "",
         "branding.faviconUrl": res.data["branding.faviconUrl"] ?? "",
         "branding.loadingBannerUrl":
-          res.data["branding.loadingBannerUrl"] ?? ""
+          res.data["branding.loadingBannerUrl"] ?? "",
+        "offerPopup.imageUrl": res.data["offerPopup.imageUrl"] ?? ""
       }));
     })();
   }, []);
@@ -284,6 +286,75 @@ export function AdminBrandingPage() {
                     getImageUrl(settingsForm["branding.loadingBannerUrl"]) || ""
                   }
                   alt="Preview banner"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "cover"
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Imagem do Popup de Ofertas */}
+        <div className="admin-form-group">
+          <label className="admin-label">Imagem do Popup de Ofertas</label>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "12px" }}>
+            Imagem que aparece no popup de ofertas na página inicial (recomendado: 400x400px ou proporção quadrada)
+          </p>
+          <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+            <div style={{ flex: 1 }}>
+        <input
+                placeholder="URL da imagem (ou faça upload abaixo)"
+          value={settingsForm["offerPopup.imageUrl"] ?? ""}
+          onChange={(e) =>
+            setSettingsForm((s) => ({
+              ...s,
+              "offerPopup.imageUrl": e.target.value
+            }))
+          }
+                style={{ marginBottom: "8px" }}
+        />
+              <label className="admin-file-upload">
+        <input
+          type="file"
+          accept="image/*"
+                  onChange={(e) =>
+                    handleFileUpload(
+                      e.target.files?.[0],
+                      "offerPopup.imageUrl"
+                    )
+                  }
+                  disabled={uploading === "offerPopup.imageUrl"}
+                />
+                {uploading === "offerPopup.imageUrl"
+                  ? "Enviando..."
+                  : "Fazer upload da imagem"}
+              </label>
+            </div>
+            {settingsForm["offerPopup.imageUrl"] && (
+              <div
+                style={{
+                  width: "150px",
+                  height: "150px",
+                  border: "1px solid rgba(246, 196, 83, 0.3)",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  background: "var(--bg-card)"
+                }}
+              >
+                <img
+                  src={
+                    getImageUrl(settingsForm["offerPopup.imageUrl"]) || ""
+                  }
+                  alt="Preview imagem popup"
                   style={{
                     maxWidth: "100%",
                     maxHeight: "100%",
