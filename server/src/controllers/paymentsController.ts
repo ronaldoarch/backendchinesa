@@ -229,25 +229,18 @@ export async function createPixPaymentController(req: Request, res: Response): P
       );
     }
 
-    // Buscar transação atualizada
-    let updatedTransaction;
-    try {
-      updatedTransaction = await findTransactionByRequestNumber(requestNumber);
-    } catch (error: any) {
-      console.warn("⚠️ Erro ao buscar transação atualizada (não crítico):", error);
-      updatedTransaction = null; // Usar dados do result se falhar
-    }
-
-    // Preparar resposta final
-    const finalTransaction = updatedTransaction || {
+    // Preparar resposta final - usar dados do result diretamente
+    // pois eles já estão mapeados corretamente da API SuitPay
+    const finalTransaction = {
       id: transaction.id,
       requestNumber,
       transactionId: result.data.transactionId,
-      qrCode: result.data.qrCode,
-      qrCodeBase64: result.data.qrCodeBase64,
+      qrCode: result.data.qrCode, // Já mapeado de paymentCode
+      qrCodeBase64: result.data.qrCodeBase64, // Já mapeado de paymentCodeBase64
       amount: result.data.amount || amount,
       dueDate: result.data.dueDate || expirationDate,
-      status: result.data.status || "PENDING"
+      status: result.data.status || "PENDING",
+      paymentMethod: "PIX" as const
     };
 
     console.log(`[PIX] 📤 Enviando resposta para frontend:`, {
@@ -255,7 +248,9 @@ export async function createPixPaymentController(req: Request, res: Response): P
       hasQrCode: !!finalTransaction.qrCode,
       hasQrCodeBase64: !!finalTransaction.qrCodeBase64,
       qrCodeLength: finalTransaction.qrCode?.length || 0,
-      qrCodeBase64Length: finalTransaction.qrCodeBase64?.length || 0
+      qrCodeBase64Length: finalTransaction.qrCodeBase64?.length || 0,
+      qrCodePreview: finalTransaction.qrCode ? finalTransaction.qrCode.substring(0, 50) + "..." : null,
+      qrCodeBase64Preview: finalTransaction.qrCodeBase64 ? finalTransaction.qrCodeBase64.substring(0, 50) + "..." : null
     });
 
     res.status(201).json({
