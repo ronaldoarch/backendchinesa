@@ -611,7 +611,7 @@ export async function webhookController(req: Request, res: Response): Promise<vo
       await updateUserBalance(transaction.userId, transaction.amount);
       console.log(`✅ Saldo atualizado para usuário ${transaction.userId}: +${transaction.amount}`);
 
-      // Atualizar total de depósitos e nível VIP
+      // Atualizar total de depósitos e nível VIP (apenas para depósitos)
       if (transaction.amount > 0 && transaction.paymentMethod !== "WITHDRAW") {
         try {
           await pool.query(
@@ -628,6 +628,23 @@ export async function webhookController(req: Request, res: Response): Promise<vo
           console.log(`⭐ Nível VIP atualizado para usuário ${transaction.userId}: ${newVipLevel}`);
         } catch (error: any) {
           console.error("Erro ao atualizar depósitos/VIP:", error);
+          // Não bloquear o processamento do webhook se houver erro
+        }
+      }
+
+      // Atualizar total de saques (apenas para saques)
+      if (transaction.paymentMethod === "WITHDRAW" && transaction.amount > 0) {
+        try {
+          await pool.query(
+            `UPDATE users 
+             SET total_withdrawal_amount = COALESCE(total_withdrawal_amount, 0) + ?, 
+                 last_withdrawal_at = NOW()
+             WHERE id = ?`,
+            [Math.abs(transaction.amount), transaction.userId]
+          );
+          console.log(`💸 Total de saques atualizado para usuário ${transaction.userId}: +${Math.abs(transaction.amount)}`);
+        } catch (error: any) {
+          console.error("Erro ao atualizar saques:", error);
           // Não bloquear o processamento do webhook se houver erro
         }
       }
