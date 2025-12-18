@@ -3,6 +3,11 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { RowDataPacket } from "mysql2";
 import { suitpayService, SuitPayPixRequest, SuitPayCardRequest, SuitPayBoletoRequest } from "../services/suitpayService";
+
+const withdrawRequestSchema = z.object({
+  amount: z.number().positive().min(10).max(50000),
+  pixKey: z.string().min(1)
+});
 import { createTransaction, updateTransactionStatus, updateUserBalance, findTransactionByRequestNumber, listUserTransactions } from "../services/transactionsService";
 import { applyBonusToDeposit } from "../services/bonusService";
 import { dispatchEvent } from "../services/trackingService";
@@ -761,6 +766,103 @@ export async function cancelTransactionController(req: Request, res: Response): 
   } catch (error: any) {
     console.error("Erro ao cancelar transação:", error);
     res.status(500).json({ error: error.message || "Erro ao cancelar transação" });
+  }
+}
+
+export async function createWithdrawController(req: Request, res: Response): Promise<void> {
+  try {
+    const authReq = req as any;
+    const userId = authReq.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: "Usuário não autenticado" });
+      return;
+    }
+
+    const parsed = withdrawRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Dados inválidos", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { amount, pixKey } = parsed.data;
+
+    // Buscar saldo do usuário
+    const [userRows] = await pool.query<RowDataPacket[]>(
+      "SELECT balance, bonus_balance FROM users WHERE id = ?",
+      [userId]
+    );
+
+    if (!userRows || userRows.length === 0) {
+      res.status(404).json({ error: "Usuário não encontrado" });
+      return;
+    }
+
+    const userBalance = Number(userRows[0].balance || 0);
+    const bonusBalance = Number(userRows[0].bonus_balance || 0);
+
+    // Verificar se o saldo é suficiente (apenas saldo normal, não bônus)
+    if (userBalance < amount) {
+      res.status(400).json({ 
+        error: "Saldo insuficiente",
+        message: `Você não pode sacar mais do que seu saldo disponível (R$ ${userBalance.toFixed(2)}). O bônus não pode ser sacado.`
+      });
+      return;
+    }
+
+    // Gerar número único da requisição
+    const requestNumber = uuidv4();
+
+    // Criar saque via SuitPay
+    const withdrawResult = await suitpayService.createPixWithdraw({
+      requestNumber,
+      amount,
+      pixKey: pixKey.trim()
+    });
+
+    if (!withdrawResult.success || !withdrawResult.data) {
+      res.status(400).json({ 
+        error: withdrawResult.error || "Erro ao criar saque",
+        message: withdrawResult.message || "Não foi possível processar o saque"
+      });
+      return;
+    }
+
+    // Criar transação no banco (tipo WITHDRAW)
+    const transaction = await createTransaction({
+      userId,
+      requestNumber,
+      paymentMethod: "PIX",
+      amount: -amount, // Negativo para saque
+      status: withdrawResult.data.status || "PENDING",
+      transactionId: withdrawResult.data.transactionId,
+      metadata: {
+        pixKey: pixKey.trim(),
+        type: "withdraw"
+      }
+    });
+
+    // Atualizar saldo do usuário (subtrair)
+    await updateUserBalance(userId, -amount);
+
+    console.log(`✅ Saque criado: usuário ${userId}, valor R$ ${amount}, requestNumber: ${requestNumber}`);
+
+    res.json({
+      success: true,
+      transaction: {
+        id: transaction.id,
+        requestNumber: transaction.requestNumber,
+        transactionId: transaction.transactionId,
+        paymentMethod: transaction.paymentMethod,
+        amount: Math.abs(transaction.amount),
+        status: transaction.status
+      }
+    });
+  } catch (error: any) {
+    console.error("Erro ao criar saque:", error);
+    res.status(500).json({ 
+      error: error.message || "Erro ao processar saque"
+    });
   }
 }
 

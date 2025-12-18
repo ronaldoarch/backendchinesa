@@ -3,6 +3,7 @@ import {
   createPixPaymentController,
   createCardPaymentController,
   createBoletoPaymentController,
+  createWithdrawController,
   webhookController,
   listTransactionsController,
   getTransactionController,
@@ -35,6 +36,7 @@ paymentsRouter.post("/pix", (req, res, next) => {
 }, authenticate, asyncHandler(createPixPaymentController));
 paymentsRouter.post("/card", authenticate, asyncHandler(createCardPaymentController));
 paymentsRouter.post("/boleto", authenticate, asyncHandler(createBoletoPaymentController));
+paymentsRouter.post("/withdraw", authenticate, asyncHandler(createWithdrawController));
 paymentsRouter.get("/transactions", authenticate, asyncHandler(listTransactionsController));
 paymentsRouter.get("/transactions/:requestNumber", authenticate, asyncHandler(getTransactionController));
 paymentsRouter.post("/transactions/:requestNumber/cancel", authenticate, asyncHandler(cancelTransactionController));

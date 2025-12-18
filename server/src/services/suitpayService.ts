@@ -647,5 +647,82 @@ export const suitpayService = {
         message: "Erro ao testar conexão com a API SuitPay"
       };
     }
+  },
+
+  /**
+   * Criar saque PIX
+   * POST /api/v1/gateway/pix-payout
+   */
+  async createPixWithdraw(request: {
+    requestNumber: string;
+    amount: number;
+    pixKey: string;
+    pixKeyType?: "CPF" | "EMAIL" | "PHONE" | "RANDOM";
+  }): Promise<SuitPayResponse<{
+    requestNumber: string;
+    transactionId?: string;
+    status: string;
+    amount: number;
+  }>> {
+    const baseUrl = SUITPAY_BASE_URL;
+    
+    try {
+      const creds = await getCredentials();
+      
+      if (!creds.clientId || !creds.clientSecret) {
+        return {
+          success: false,
+          error: "Credenciais não configuradas",
+          message: "Configure as credenciais SuitPay no painel admin"
+        };
+      }
+
+      const client = await createClient();
+      
+      // Detectar tipo de chave PIX
+      let pixKeyType = request.pixKeyType;
+      if (!pixKeyType) {
+        if (/^\d{11}$/.test(request.pixKey.replace(/[^\d]/g, ""))) {
+          pixKeyType = "CPF";
+        } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.pixKey)) {
+          pixKeyType = "EMAIL";
+        } else if (/^\+?55\d{10,11}$/.test(request.pixKey.replace(/[^\d+]/g, ""))) {
+          pixKeyType = "PHONE";
+        } else {
+          pixKeyType = "RANDOM";
+        }
+      }
+
+      const payload = {
+        requestNumber: request.requestNumber,
+        value: request.amount.toFixed(2),
+        pixKey: request.pixKey,
+        pixKeyType: pixKeyType
+      };
+
+      console.log(`[SuitPay] Criando saque PIX:`, payload);
+
+      const { data: apiResponse } = await client.post("/api/v1/gateway/pix-payout", payload);
+      
+      console.log(`[SuitPay] Resposta do saque:`, apiResponse);
+
+      return {
+        success: apiResponse.response === "OK" || apiResponse.success === true,
+        data: {
+          requestNumber: request.requestNumber,
+          transactionId: apiResponse.idTransaction || apiResponse.transactionId,
+          status: apiResponse.response === "OK" ? "PENDING" : "FAILED",
+          amount: request.amount
+        },
+        message: apiResponse.message || "Saque criado com sucesso"
+      };
+    } catch (error: any) {
+      console.error("❌ Erro ao criar saque PIX:", error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || "Erro ao criar saque",
+        message: "Erro ao processar saque"
+      };
+    }
   }
 };

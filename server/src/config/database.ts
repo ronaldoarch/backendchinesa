@@ -214,7 +214,7 @@ export async function initDb() {
         user_id INT NOT NULL,
         request_number VARCHAR(255) UNIQUE NOT NULL,
         transaction_id VARCHAR(255),
-        payment_method ENUM('PIX', 'CARD', 'BOLETO', 'BONUS', 'GAME_BET') NOT NULL,
+        payment_method ENUM('PIX', 'CARD', 'BOLETO', 'BONUS', 'GAME_BET', 'WITHDRAW') NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'PENDING',
         qr_code TEXT,

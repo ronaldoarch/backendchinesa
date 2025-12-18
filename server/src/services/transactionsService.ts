@@ -5,7 +5,7 @@ export type Transaction = {
   userId: number;
   requestNumber: string;
   transactionId?: string | null;
-  paymentMethod: "PIX" | "CARD" | "BOLETO";
+  paymentMethod: "PIX" | "CARD" | "BOLETO" | "WITHDRAW";
   amount: number;
   status: string;
   qrCode?: string | null;
@@ -22,7 +22,7 @@ export type Transaction = {
 export async function createTransaction(data: {
   userId: number;
   requestNumber: string;
-  paymentMethod: "PIX" | "CARD" | "BOLETO";
+  paymentMethod: "PIX" | "CARD" | "BOLETO" | "WITHDRAW";
   amount: number;
   status?: string;
   transactionId?: string;

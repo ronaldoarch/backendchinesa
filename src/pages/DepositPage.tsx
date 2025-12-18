@@ -22,7 +22,10 @@ type Transaction = {
   updatedAt?: string;
 };
 
+type TabType = "deposit" | "withdraw";
+
 export function DepositPage() {
+  const [tab, setTab] = useState<TabType>("deposit");
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("PIX");
   const [amount, setAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +34,7 @@ export function DepositPage() {
   const [user, setUser] = useState<any>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState<{ show: boolean; amount: number } | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pixKey, setPixKey] = useState<string>("");
 
   // Debug: log quando paymentConfirmed mudar
   useEffect(() => {
@@ -275,11 +279,134 @@ export function DepositPage() {
     }
   };
 
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) {
+      alert("Você precisa estar logado para fazer um saque");
+      return;
+    }
+
+    const amountValue = parseFloat(amount.replace(/[^\d,]/g, "").replace(",", "."));
+    
+    if (isNaN(amountValue) || amountValue < 10 || amountValue > 50000) {
+      setError("Valor inválido. Mínimo: R$ 10,00 | Máximo: R$ 50.000,00");
+      return;
+    }
+
+    if (!pixKey || pixKey.trim() === "") {
+      setError("Por favor, informe a chave PIX");
+      return;
+    }
+
+    // Verificar se o saldo é suficiente (não incluir bônus)
+    if (user.balance < amountValue) {
+      setError("Saldo insuficiente. Você não pode sacar mais do que seu saldo disponível.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setTransaction(null);
+
+    try {
+      const response = await api.post<{ success: boolean; transaction: Transaction }>("/payments/withdraw", {
+        amount: amountValue,
+        pixKey: pixKey.trim()
+      });
+
+      if (response.data.success && response.data.transaction) {
+        setTransaction(response.data.transaction);
+        setAmount("");
+        setPixKey("");
+        
+        // Atualizar saldo do usuário
+        try {
+          const userResponse = await api.get("/auth/me");
+          setUser(userResponse.data);
+          if (window.localStorage) {
+            window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+          }
+        } catch (error) {
+          console.error("Erro ao atualizar dados do usuário:", error);
+        }
+      } else {
+        setError("Erro ao criar saque. Tente novamente.");
+      }
+    } catch (error: any) {
+      console.error("Erro ao criar saque:", error);
+      let errorMsg = "Erro ao processar saque";
+      
+      if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="deposit-page">
       <header className="deposit-header">
-        <h1>Depósito online</h1>
+        <h1>Depósito e Saque</h1>
       </header>
+
+      {/* Abas */}
+      <div style={{
+        display: "flex",
+        gap: "8px",
+        marginBottom: "20px",
+        borderBottom: "2px solid rgba(246, 196, 83, 0.2)"
+      }}>
+        <button
+          type="button"
+          onClick={() => {
+            setTab("deposit");
+            setTransaction(null);
+            setError(null);
+          }}
+          style={{
+            flex: 1,
+            padding: "12px",
+            background: tab === "deposit" ? "var(--gold)" : "transparent",
+            color: tab === "deposit" ? "#000" : "var(--text-main)",
+            border: "none",
+            borderBottom: tab === "deposit" ? "2px solid var(--gold)" : "2px solid transparent",
+            fontWeight: tab === "deposit" ? "bold" : "normal",
+            cursor: "pointer",
+            fontSize: "16px"
+          }}
+        >
+          Depósito
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTab("withdraw");
+            setTransaction(null);
+            setError(null);
+          }}
+          style={{
+            flex: 1,
+            padding: "12px",
+            background: tab === "withdraw" ? "var(--gold)" : "transparent",
+            color: tab === "withdraw" ? "#000" : "var(--text-main)",
+            border: "none",
+            borderBottom: tab === "withdraw" ? "2px solid var(--gold)" : "2px solid transparent",
+            fontWeight: tab === "withdraw" ? "bold" : "normal",
+            cursor: "pointer",
+            fontSize: "16px"
+          }}
+        >
+          Saque
+        </button>
+      </div>
 
       <section className="deposit-section">
         <div className="deposit-provider-card">
@@ -290,27 +417,29 @@ export function DepositPage() {
           </div>
         </div>
 
-        <div className="deposit-method-tabs">
-          <button
-            className={`deposit-method-tab ${selectedMethod === "PIX" ? "deposit-method-tab-active" : ""}`}
-            onClick={() => setSelectedMethod("PIX")}
-            type="button"
-          >
-            PIX
-          </button>
-        </div>
+        {tab === "deposit" ? (
+          <>
+            <div className="deposit-method-tabs">
+              <button
+                className={`deposit-method-tab ${selectedMethod === "PIX" ? "deposit-method-tab-active" : ""}`}
+                onClick={() => setSelectedMethod("PIX")}
+                type="button"
+              >
+                PIX
+              </button>
+            </div>
 
-        {transaction && transaction.status === "PENDING" && (
-          <div style={{
-            padding: "16px",
-            background: "rgba(246, 196, 83, 0.1)",
-            border: "1px solid var(--gold)",
-            borderRadius: "8px",
-            marginBottom: "16px"
-          }}>
-            <h3 style={{ marginTop: 0, color: "var(--gold)" }}>Pagamento criado com sucesso!</h3>
-            
-            {selectedMethod === "PIX" && (
+            {transaction && transaction.status === "PENDING" && tab === "deposit" && (
+              <div style={{
+                padding: "16px",
+                background: "rgba(246, 196, 83, 0.1)",
+                border: "1px solid var(--gold)",
+                borderRadius: "8px",
+                marginBottom: "16px"
+              }}>
+                <h3 style={{ marginTop: 0, color: "var(--gold)" }}>Pagamento criado com sucesso!</h3>
+                
+                {selectedMethod === "PIX" && (
               <div>
                 {/* QR Code - sempre mostrar se disponível */}
                 {transaction.qrCodeBase64 && (
@@ -460,13 +589,13 @@ export function DepositPage() {
               </div>
             )}
 
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "16px" }}>
-              Status: {transaction.status} | Aguardando pagamento...
-            </p>
-          </div>
-        )}
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "16px" }}>
+                  Status: {transaction.status} | Aguardando pagamento...
+                </p>
+              </div>
+            )}
 
-        {error && (
+            {error && tab === "deposit" && (
           <div style={{
             padding: "12px",
             background: "rgba(255, 107, 107, 0.1)",
@@ -479,7 +608,20 @@ export function DepositPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+            {error && tab === "deposit" && (
+              <div style={{
+                padding: "12px",
+                background: "rgba(255, 107, 107, 0.1)",
+                border: "1px solid #ff6b6b",
+                borderRadius: "8px",
+                marginBottom: "16px",
+                color: "#ff6b6b"
+              }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
           <div className="deposit-amount-grid">
             {quickAmounts.map((v) => (
               <button
@@ -512,6 +654,177 @@ export function DepositPage() {
             {loading ? "Processando..." : "Deposite agora"}
           </button>
         </form>
+          </>
+        ) : (
+            <>
+              {/* Formulário de Saque */}
+              <div style={{
+                padding: "16px",
+                background: "rgba(246, 196, 83, 0.05)",
+                border: "1px solid rgba(246, 196, 83, 0.2)",
+                borderRadius: "8px",
+                marginBottom: "16px"
+              }}>
+                <p style={{
+                  margin: "0 0 12px 0",
+                  color: "var(--text-muted)",
+                  fontSize: "14px"
+                }}>
+                  Saldo disponível: <strong style={{ color: "var(--gold)" }}>
+                    R$ {user?.balance?.toFixed(2).replace(".", ",") || "0,00"}
+                  </strong>
+                </p>
+                {user?.bonus_balance > 0 && (
+                  <p style={{
+                    margin: "0 0 12px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Bônus: R$ {user.bonus_balance.toFixed(2).replace(".", ",")} (não pode ser sacado)
+                  </p>
+                )}
+              </div>
+
+              <form onSubmit={handleWithdraw}>
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    color: "var(--text-main)",
+                    fontSize: "14px",
+                    fontWeight: "600"
+                  }}>
+                    Chave PIX
+                  </label>
+                  <input
+                    type="text"
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    placeholder="CPF, E-mail, Telefone ou Chave Aleatória"
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid rgba(246, 196, 83, 0.3)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "14px"
+                    }}
+                    required
+                  />
+                  <p style={{
+                    margin: "8px 0 0 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Informe a chave PIX para onde deseja receber o saque
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    color: "var(--text-main)",
+                    fontSize: "14px",
+                    fontWeight: "600"
+                  }}>
+                    Valor do saque
+                  </label>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, 1fr)",
+                    gap: "8px",
+                    marginBottom: "12px"
+                  }}>
+                    {quickAmounts.map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setAmount(v.toString())}
+                        style={{
+                          padding: "10px",
+                          background: "var(--bg-elevated)",
+                          border: "1px solid rgba(246, 196, 83, 0.3)",
+                          borderRadius: "8px",
+                          color: "var(--text-main)",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                          fontSize: "14px"
+                        }}
+                      >
+                        R$ {v.toLocaleString("pt-BR")}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="R$ Mínimo 10 – Máximo 50.000"
+                    value={amount}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d,]/g, "");
+                      setAmount(value);
+                    }}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid rgba(246, 196, 83, 0.3)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "16px"
+                    }}
+                  />
+                </div>
+
+                <button
+                  className="btn btn-gold deposit-submit"
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    fontSize: "16px",
+                    fontWeight: "bold"
+                  }}
+                >
+                  {loading ? "Processando..." : "Solicitar Saque"}
+                </button>
+              </form>
+
+            {error && tab === "withdraw" && (
+              <div style={{
+                padding: "12px",
+                background: "rgba(255, 107, 107, 0.1)",
+                border: "1px solid #ff6b6b",
+                borderRadius: "8px",
+                marginBottom: "16px",
+                color: "#ff6b6b"
+              }}>
+                {error}
+              </div>
+            )}
+
+            {transaction && transaction.status === "PENDING" && tab === "withdraw" && (
+                <div style={{
+                  padding: "16px",
+                  background: "rgba(246, 196, 83, 0.1)",
+                  border: "1px solid var(--gold)",
+                  borderRadius: "8px",
+                  marginTop: "16px"
+                }}>
+                  <h3 style={{ marginTop: 0, color: "var(--gold)" }}>Saque solicitado com sucesso!</h3>
+                  <p style={{ color: "var(--text-main)", marginBottom: "8px" }}>
+                    Seu saque de <strong>R$ {transaction.amount.toFixed(2).replace(".", ",")}</strong> foi solicitado e está sendo processado.
+                  </p>
+                  <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
+                    Status: {transaction.status} | Aguardando processamento...
+                  </p>
+                </div>
+              )}
+            </>
+          )}
       </section>
 
       {/* Popup de pagamento confirmado */}
