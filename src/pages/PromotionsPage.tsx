@@ -7,7 +7,7 @@ type Props = {
   onRequireAuth: () => void;
 };
 
-type Tab = "eventos" | "vip" | "rebate" | "recompensas" | "historico";
+type Tab = "eventos" | "vip" | "recompensas" | "historico";
 
 type Promotion = {
   id: number;
@@ -28,7 +28,7 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
 
   // Atualizar tab quando a URL mudar
   useEffect(() => {
-    if (tabFromUrl && ["eventos", "vip", "rebate", "recompensas", "historico"].includes(tabFromUrl)) {
+    if (tabFromUrl && ["eventos", "vip", "recompensas", "historico"].includes(tabFromUrl)) {
       setTab(tabFromUrl);
     }
   }, [tabFromUrl]);
@@ -49,7 +49,7 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
   }
 
   function handleChangeTab(next: Tab) {
-    if ((next === "vip" || next === "rebate") && !user) {
+    if (next === "vip" && !user) {
       onRequireAuth();
       return;
     }
@@ -78,14 +78,6 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
         </button>
         <button
           className={`promos-tab ${
-            tab === "rebate" ? "promos-tab-active" : ""
-          } ${!user ? "promos-tab-locked" : ""}`}
-          onClick={() => handleChangeTab("rebate")}
-        >
-          Taxa de Rebate
-        </button>
-        <button
-          className={`promos-tab ${
             tab === "recompensas" ? "promos-tab-active" : ""
           }`}
           onClick={() => handleChangeTab("recompensas")}
@@ -105,7 +97,6 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
       <div className="promos-content">
         {tab === "eventos" && <EventosView promotions={promotions.filter((p) => p.category === "eventos")} loading={loading} />}
         {tab === "vip" && <VipLevelsView user={user} />}
-        {tab === "rebate" && <RebateView />}
         {tab === "recompensas" && <TarefaView />}
         {tab === "historico" && (
           <div className="promos-empty">
@@ -390,84 +381,4 @@ function VipLevelsView({ user }: { user: { username: string } | null }) {
   );
 }
 
-function RebateView() {
-  type RebateTab = "taxa" | "juros" | "historico";
-  const [subTab, setSubTab] = useState<RebateTab>("taxa");
-
-  if (subTab === "taxa") {
-    const lines = Array.from({ length: 6 }).map((_, idx) => ({
-      id: idx + 1,
-      validBets: "0,00",
-      rate: "0,00%",
-      pending: "0,00"
-    }));
-
-    return (
-      <div className="rebate-wrapper">
-        <p className="rebate-info">
-          Pode ser resgatado hoje <strong>0,00</strong>
-        </p>
-        <div className="rebate-subtabs">
-          <button className="vip-subtab vip-subtab-active">Taxa de rebate</button>
-          <button className="vip-subtab" onClick={() => setSubTab("juros")}>
-            Juros
-          </button>
-          <button className="vip-subtab" onClick={() => setSubTab("historico")}>
-            Histórico
-          </button>
-        </div>
-
-        <div className="promos-cards-column">
-          {lines.map((row) => (
-            <article key={row.id} className="promo-event-card">
-              <p className="promo-event-subtitle">
-                Apostas válidas <strong>{row.validBets}</strong>
-              </p>
-              <p className="promo-event-desc">
-                Taxa de rebate coletável <strong>{row.rate}</strong> — bônus{" "}
-                <strong>{row.pending}</strong>
-              </p>
-            </article>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (subTab === "juros") {
-    return (
-      <div className="rebate-wrapper">
-        <div className="rebate-subtabs">
-          <button className="vip-subtab" onClick={() => setSubTab("taxa")}>
-            Taxa de rebate
-          </button>
-          <button className="vip-subtab vip-subtab-active">Juros</button>
-          <button className="vip-subtab" onClick={() => setSubTab("historico")}>
-            Histórico
-          </button>
-        </div>
-        <p className="promos-empty">
-          Hoje sem registros de juros, mas aqui aparecerá a renda acumulada.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rebate-wrapper">
-      <div className="rebate-subtabs">
-        <button className="vip-subtab" onClick={() => setSubTab("taxa")}>
-          Taxa de rebate
-        </button>
-        <button className="vip-subtab" onClick={() => setSubTab("juros")}>
-          Juros
-        </button>
-        <button className="vip-subtab vip-subtab-active">Histórico</button>
-      </div>
-      <p className="promos-empty">
-        Hoje sem registros, mas você poderá visualizar o mês atual aqui.
-      </p>
-    </div>
-  );
-}
 

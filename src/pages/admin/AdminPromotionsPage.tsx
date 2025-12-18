@@ -14,7 +14,6 @@ type Promotion = {
 const CATEGORIES = [
   { value: "eventos", label: "Eventos" },
   { value: "vip", label: "VIP" },
-  { value: "rebate", label: "Taxa de Rebate" },
   { value: "recompensas", label: "Recompensas" },
   { value: "historico", label: "Histórico" }
 ];
