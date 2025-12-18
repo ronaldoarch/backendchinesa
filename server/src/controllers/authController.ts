@@ -57,14 +57,15 @@ export async function registerController(req: Request, res: Response): Promise<v
     if (referralCode) {
       try {
         const { pool } = await import("../config/database");
-        const [affiliates] = await pool.query<any[]>(
+        const poolInstance = pool;
+        const [affiliates] = await poolInstance.query<any[]>(
           "SELECT id FROM affiliates WHERE code = ? AND active = true",
           [referralCode.toUpperCase()]
         );
 
-        if (affiliates && affiliates.length > 0) {
+        if (affiliates && Array.isArray(affiliates) && affiliates.length > 0) {
           const affiliateId = affiliates[0].id;
-          await pool.query(
+          await poolInstance.query(
             "INSERT INTO affiliate_referrals (affiliate_id, referred_user_id) VALUES (?, ?)",
             [affiliateId, user.id]
           );
