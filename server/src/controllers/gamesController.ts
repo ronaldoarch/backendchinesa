@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createGame, findGameWithProvider, listGames, updateGame } from "../services/gamesService";
 import { playFiversService } from "../services/playfivers-v2";
 import { findUserById } from "../services/authService";
+import { getSettings } from "../services/settingsService";
 
 const gameSchema = z.object({
   providerId: z.number(),
@@ -154,6 +155,22 @@ export async function launchGameController(req: Request, res: Response): Promise
   }
 
   try {
+    // Buscar RTP padrão das settings
+    let defaultRtp: number | undefined = undefined;
+    try {
+      const settings = await getSettings();
+      const rtpSetting = settings.find(s => s.key === "playfivers.rtp");
+      if (rtpSetting && rtpSetting.value) {
+        const rtpValue = Number(rtpSetting.value);
+        if (!isNaN(rtpValue) && rtpValue >= 0 && rtpValue <= 100) {
+          defaultRtp = rtpValue;
+          console.log(`📊 [LAUNCH GAME] Usando RTP das settings: ${defaultRtp}%`);
+        }
+      }
+    } catch (error) {
+      console.warn("⚠️ [LAUNCH GAME] Erro ao buscar RTP das settings, usando undefined:", error);
+    }
+
     // Conforme documentação: provider deve ser o NOME do provedor, não o código
     const result = await playFiversService.launchGame(
       game.providerName, // Nome do provedor (ex: "PGSOFT", "PRAGMATIC")
@@ -162,7 +179,7 @@ export async function launchGameController(req: Request, res: Response): Promise
       userBalance,       // user_balance (saldo real do usuário)
       true,              // game_original (assumindo true por padrão)
       "pt",              // lang (português)
-      undefined          // user_rtp (opcional)
+      defaultRtp         // user_rtp (usar RTP das settings se disponível)
     );
 
     if (!result.success || !result.data?.url) {

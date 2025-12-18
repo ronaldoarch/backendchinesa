@@ -48,7 +48,8 @@ export function AdminPlayfiversPage() {
     "playfivers.agentId": "",
     "playfivers.secret": "",
     "playfivers.token": "",
-    "playfivers.authMethod": "agent"
+    "playfivers.authMethod": "agent",
+    "playfivers.rtp": "96"
   });
 
   // Estados para busca e importação
@@ -148,7 +149,8 @@ export function AdminPlayfiversPage() {
           "playfivers.agentId": settings["playfivers.agentId"] ?? "",
           "playfivers.secret": settings["playfivers.secret"] ?? "",
           "playfivers.token": settings["playfivers.token"] ?? "",
-          "playfivers.authMethod": settings["playfivers.authMethod"] ?? "agent"
+          "playfivers.authMethod": settings["playfivers.authMethod"] ?? "agent",
+          "playfivers.rtp": settings["playfivers.rtp"] ?? "96"
         }));
       } catch (error: any) {
         console.error("❌ Erro ao carregar settings:", error.response?.status, error.message);
@@ -209,6 +211,36 @@ export function AdminPlayfiversPage() {
       }
     } finally {
       setLoading((prev) => ({ ...prev, testConnection: false }));
+    }
+  }
+
+  async function handleSetAgentRtp() {
+    const rtp = Number(settingsForm["playfivers.rtp"] || "96");
+    
+    if (isNaN(rtp) || rtp < 0 || rtp > 100) {
+      showMessage("error", "RTP deve ser um número entre 0 e 100");
+      return;
+    }
+    
+    try {
+      // Primeiro salvar nas settings
+      await api.put("/settings", {
+        "playfivers.rtp": String(rtp)
+      });
+      
+      // Depois atualizar na PlayFivers
+      const response = await api.post("/playfivers/set-agent-rtp", {
+        rtp
+      });
+      
+      if (response.data.success) {
+        showMessage("success", `✅ RTP do agente configurado: ${rtp}%`);
+      } else {
+        showMessage("error", `❌ Erro: ${response.data.error || response.data.message}`);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido";
+      showMessage("error", `Erro ao configurar RTP do agente: ${errorMsg}`);
     }
   }
 
@@ -582,6 +614,37 @@ export function AdminPlayfiversPage() {
               <option value="api_key">API Key (X-API-Key header)</option>
               <option value="basic">Basic Auth</option>
             </select>
+          </label>
+          <label>
+            <span>RTP do Agente (%)</span>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="96"
+                value={settingsForm["playfivers.rtp"] ?? "96"}
+                onChange={(e) =>
+                  setSettingsForm((s) => ({
+                    ...s,
+                    "playfivers.rtp": e.target.value
+                  }))
+                }
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="btn btn-gold"
+                onClick={handleSetAgentRtp}
+                disabled={loading.testConnection}
+              >
+                Atualizar RTP
+              </button>
+            </div>
+            <p style={{ margin: "5px 0 0 0", color: "#999", fontSize: "12px" }}>
+              Configure o RTP (Return to Player) padrão do agente na PlayFivers. Valor entre 0 e 100.
+            </p>
           </label>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button className="btn btn-gold" type="submit">

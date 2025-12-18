@@ -615,6 +615,94 @@ export const playFiversService = {
   },
 
   /**
+   * Configurar RTP do agente na PlayFivers
+   * Segundo a documentação: PUT /api/v2/agent
+   * Body: { agentToken, secretKey, rtp }
+   */
+  async setAgentRtp(rtp: number): Promise<PlayFiversResponse> {
+    try {
+      const client = await createClient();
+      const creds = await getCredentials();
+
+      // Validar RTP (geralmente entre 0 e 100)
+      if (rtp < 0 || rtp > 100) {
+        return {
+          success: false,
+          error: "RTP inválido",
+          message: "O RTP deve estar entre 0 e 100"
+        };
+      }
+
+      // Segundo a documentação: PUT /api/v2/agent para atualizar informações do agente
+      // Inclui rtp no body junto com agentToken e secretKey
+      const requestData = await addAuthToBody({
+        rtp: Number(rtp),
+        agent_rtp: Number(rtp) // Tentar ambos os nomes
+      });
+
+      try {
+        // Tentar PUT /api/v2/agent (endpoint oficial)
+        const { data } = await client.put("/api/v2/agent", requestData);
+
+        // eslint-disable-next-line no-console
+        console.log(`✅ RTP do agente configurado: ${rtp}%`);
+
+        return {
+          success: true,
+          data,
+          message: `RTP do agente configurado com sucesso: ${rtp}%`
+        };
+      } catch (putError: any) {
+        // Se PUT falhar, tentar POST
+        if (putError.response?.status === 405 || putError.response?.status === 404) {
+          const { data } = await client.post("/api/v2/agent", requestData);
+          
+          // eslint-disable-next-line no-console
+          console.log(`✅ RTP do agente configurado via POST: ${rtp}%`);
+          
+          return {
+            success: true,
+            data,
+            message: `RTP do agente configurado com sucesso: ${rtp}%`
+          };
+        }
+        
+        // Se for 401/403, credenciais podem estar erradas
+        if (putError.response?.status === 401 || putError.response?.status === 403) {
+          return {
+            success: false,
+            error: "Credenciais inválidas ou sem permissão",
+            message: `Erro de autenticação ao configurar RTP (status: ${putError.response.status})`
+          };
+        }
+        
+        throw putError;
+      }
+
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.error("❌ Erro ao configurar RTP do agente:", error);
+
+      // Tratamento específico para 422
+      if (error.response?.status === 422) {
+        const errorData = error.response?.data || {};
+        const errorMsg = errorData.message || errorData.error || "Dados inválidos";
+        return {
+          success: false,
+          error: `Erro de validação (422): ${errorMsg}`,
+          message: `A API PlayFivers rejeitou a requisição. Verifique se as credenciais e o valor de RTP estão corretos. Detalhes: ${JSON.stringify(errorData)}`
+        };
+      }
+
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.error || error.message,
+        message: "Erro ao configurar RTP do agente"
+      };
+    }
+  },
+
+  /**
    * Configurar callback URL na PlayFivers
    * Segundo a documentação: PUT /api/v2/agent
    * Body: { agentToken, secretKey, callback_url }

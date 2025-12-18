@@ -5,6 +5,7 @@ import {
   importProviderController,
   listGamesPlayfiversController,
   listProvidersPlayfiversController,
+  setAgentRtpController,
   setCallbackUrlController,
   testConnectionController
 } from "../controllers/playfiversController";
@@ -19,4 +20,5 @@ playfiversRouter.post("/import-provider", asyncHandler(importProviderController)
 playfiversRouter.post("/import-game", asyncHandler(importGameController));
 playfiversRouter.post("/import-games-bulk", asyncHandler(importGamesBulkController));
 playfiversRouter.post("/set-callback-url", asyncHandler(setCallbackUrlController));
+playfiversRouter.post("/set-agent-rtp", asyncHandler(setAgentRtpController));
 

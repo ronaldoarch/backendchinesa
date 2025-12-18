@@ -173,6 +173,46 @@ export async function importGameController(req: Request, res: Response): Promise
   }
 }
 
+export async function setAgentRtpController(req: Request, res: Response): Promise<void> {
+  try {
+    const { rtp } = req.body;
+
+    if (rtp === undefined || rtp === null) {
+      res.status(400).json({
+        success: false,
+        message: "RTP é obrigatório"
+      });
+      return;
+    }
+
+    const rtpNumber = Number(rtp);
+    if (isNaN(rtpNumber) || rtpNumber < 0 || rtpNumber > 100) {
+      res.status(400).json({
+        success: false,
+        message: "RTP deve ser um número entre 0 e 100"
+      });
+      return;
+    }
+
+    const result = await playFiversService.setAgentRtp(rtpNumber);
+    
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    // eslint-disable-next-line no-console
+    console.error("Erro ao configurar RTP do agente:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: "Erro ao configurar RTP do agente"
+    });
+  }
+}
+
 export async function setCallbackUrlController(req: Request, res: Response): Promise<void> {
   try {
     const { callbackUrl } = req.body;
