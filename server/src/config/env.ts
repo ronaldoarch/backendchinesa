@@ -9,6 +9,7 @@ type Env = {
   dbName: string;
   jwtSecret: string;
   backendUrl: string;
+  frontendUrl: string;
 };
 
 // Função para parsear URL MySQL do Railway (MYSQL_PUBLIC_URL ou MYSQL_URL)
@@ -41,7 +42,8 @@ export const env: Env = {
   dbPassword: mysqlUrlConfig?.password || process.env.DB_PASSWORD || "",
   dbName: mysqlUrlConfig?.database || process.env.DB_NAME || "chinesa_cassino",
   jwtSecret: process.env.JWT_SECRET || "sua-chave-secreta-super-segura-mude-em-producao",
-  backendUrl: process.env.BACKEND_URL || process.env.APP_URL || "https://g40okoockcoskwwwgc4sowso.agenciamidas.com"
+  backendUrl: process.env.BACKEND_URL || process.env.APP_URL || "https://g40okoockcoskwwwgc4sowso.agenciamidas.com",
+  frontendUrl: process.env.FRONTEND_URL || process.env.APP_URL || "https://h2jogos.site"
 };
 
 if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_NAME) {

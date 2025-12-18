@@ -15,6 +15,7 @@ import { rewardsRouter } from "./rewards";
 import { managersRouter } from "./managers";
 import { affiliatesRouter } from "./affiliates";
 import { commissionsRouter } from "./commissions";
+import { referralsRouter } from "./referrals";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -194,6 +195,8 @@ apiRouter.use("/managers", managersRouter);
 apiRouter.use("/affiliates", affiliatesRouter);
 // Comissões (proteção aplicada no próprio router)
 apiRouter.use("/commissions", commissionsRouter);
+// Indicações (proteção aplicada no próprio router)
+apiRouter.use("/referrals", referralsRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);

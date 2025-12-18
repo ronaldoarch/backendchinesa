@@ -53,28 +53,25 @@ export async function registerController(req: Request, res: Response): Promise<v
     const user = await createUser(username, password, phone, currency);
     console.log("✅ [REGISTER] Usuário criado:", { id: user.id, username: user.username });
 
-    // Rastrear referência se código fornecido
+    // Rastrear referência se código fornecido (novo sistema de indicação)
     if (referralCode) {
       try {
-        const { pool } = await import("../config/database");
-        const poolInstance = pool;
-        const [affiliates] = await poolInstance.query<any[]>(
-          "SELECT id FROM affiliates WHERE code = ? AND active = true",
-          [referralCode.toUpperCase()]
-        );
-
-        if (affiliates && Array.isArray(affiliates) && affiliates.length > 0) {
-          const affiliateId = affiliates[0].id;
-          await poolInstance.query(
-            "INSERT INTO affiliate_referrals (affiliate_id, referred_user_id) VALUES (?, ?)",
-            [affiliateId, user.id]
-          );
-          console.log("✅ [REGISTER] Referência registrada:", { affiliateId, userId: user.id });
-        }
+        const { registerReferral } = await import("../services/referralService");
+        await registerReferral(user.id, referralCode);
+        console.log("✅ [REGISTER] Referência registrada para usuário:", user.id);
       } catch (error: any) {
         console.error("⚠️ [REGISTER] Erro ao rastrear referência (não crítico):", error.message);
         // Não falhar o registro se houver erro ao rastrear referência
       }
+    }
+    
+    // Gerar código de referência para o novo usuário
+    try {
+      const { generateReferralCode } = await import("../services/referralService");
+      await generateReferralCode(user.id);
+      console.log("✅ [REGISTER] Código de referência gerado para usuário:", user.id);
+    } catch (error: any) {
+      console.error("⚠️ [REGISTER] Erro ao gerar código de referência (não crítico):", error.message);
     }
     
     const token = generateToken(user);
@@ -222,6 +219,7 @@ export async function meController(req: Request, res: Response): Promise<void> {
     document: user.document,
     currency: user.currency,
     balance: user.balance || 0,
+    bonus_balance: user.bonus_balance || 0,
     is_admin: user.is_admin,
     user_type: user.user_type || "user"
   });

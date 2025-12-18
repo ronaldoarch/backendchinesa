@@ -12,6 +12,7 @@ export type User = {
   document?: string;
   currency: string;
   balance?: number;
+  bonus_balance?: number;
   is_admin: boolean;
   user_type?: string;
   created_at: Date;
@@ -122,10 +123,10 @@ export async function findUserByUsername(username: string): Promise<UserWithPass
 }
 
 export async function findUserById(id: number): Promise<User | null> {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    "SELECT id, username, phone, email, document, currency, COALESCE(balance, 0) as balance, is_admin, COALESCE(user_type, 'user') as user_type, created_at FROM users WHERE id = ?",
-    [id]
-  );
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT id, username, phone, email, document, currency, COALESCE(balance, 0) as balance, COALESCE(bonus_balance, 0) as bonus_balance, is_admin, COALESCE(user_type, 'user') as user_type, created_at FROM users WHERE id = ?",
+      [id]
+    );
 
   if (rows.length === 0) {
     return null;
@@ -133,12 +134,13 @@ export async function findUserById(id: number): Promise<User | null> {
 
   const row = rows[0];
   // Garantir que is_admin seja boolean (MySQL pode retornar 0/1)
-  return {
-    ...row,
-    balance: Number(row.balance || 0),
-    is_admin: Boolean(row.is_admin === 1 || row.is_admin === true),
-    user_type: row.user_type || "user"
-  } as User;
+    return {
+      ...row,
+      balance: Number(row.balance || 0),
+      bonus_balance: Number(row.bonus_balance || 0),
+      is_admin: Boolean(row.is_admin === 1 || row.is_admin === true),
+      user_type: row.user_type || "user"
+    } as User;
 }
 
 export async function updateUserProfile(

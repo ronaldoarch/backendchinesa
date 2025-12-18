@@ -182,6 +182,32 @@ export async function initDb() {
       console.warn("⚠️ Aviso ao verificar/adicionar coluna document:", error.message);
     }
 
+    // Adicionar colunas para sistema de indicação
+    try {
+      const [referralCodeColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'referral_code'`
+      );
+      
+      if (!referralCodeColumns || referralCodeColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN referral_code VARCHAR(20) UNIQUE NULL,
+          ADD COLUMN bonus_balance DECIMAL(10, 2) DEFAULT 0.00,
+          ADD COLUMN referred_by INT NULL,
+          ADD INDEX idx_referral_code (referral_code),
+          ADD INDEX idx_referred_by (referred_by),
+          ADD FOREIGN KEY (referred_by) REFERENCES users(id) ON DELETE SET NULL
+        `);
+        console.log("✅ Colunas de indicação adicionadas à tabela users");
+      }
+    } catch (error: any) {
+      console.warn("⚠️ Aviso ao verificar/adicionar colunas de indicação:", error.message);
+    }
+
     await connection.query(`
       CREATE TABLE IF NOT EXISTS transactions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -243,6 +269,26 @@ export async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_type (type),
         INDEX idx_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabela para rastrear apostas dos indicados
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS referral_bets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        referred_user_id INT NOT NULL,
+        referrer_user_id INT NOT NULL,
+        bet_amount DECIMAL(10, 2) NOT NULL,
+        total_bet_amount DECIMAL(10, 2) DEFAULT 0.00,
+        bonus_credited BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (referred_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (referrer_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_referral_bet (referred_user_id, referrer_user_id),
+        INDEX idx_referred_user (referred_user_id),
+        INDEX idx_referrer_user (referrer_user_id),
+        INDEX idx_bonus_credited (bonus_credited)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 

@@ -10,7 +10,20 @@ type UserData = {
   document?: string;
   currency: string;
   balance: number;
+  bonus_balance?: number;
   is_admin: boolean;
+};
+
+type ReferralStats = {
+  totalReferrals: number;
+  totalBonusEarned: number;
+  bonusBalance: number;
+  referrals: Array<{
+    userId: number;
+    username: string;
+    totalBet: number;
+    bonusCredited: boolean;
+  }>;
 };
 
 export function ProfilePage() {
@@ -18,11 +31,41 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editModal, setEditModal] = useState<"dados" | "senha" | null>(null);
+  const [referralLink, setReferralLink] = useState<string>("");
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
+  const [loadingReferral, setLoadingReferral] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadUserData();
+    loadReferralData();
   }, []);
+
+  async function loadReferralData() {
+    try {
+      setLoadingReferral(true);
+      const [linkResponse, statsResponse] = await Promise.all([
+        api.get<{ referralCode: string; referralLink: string }>("/referrals/link"),
+        api.get<ReferralStats>("/referrals/stats")
+      ]);
+      
+      setReferralLink(linkResponse.data.referralLink);
+      setReferralCode(linkResponse.data.referralCode);
+      setReferralStats(statsResponse.data);
+    } catch (err: any) {
+      console.error("Erro ao carregar dados de indicação:", err);
+    } finally {
+      setLoadingReferral(false);
+    }
+  }
+
+  function copyReferralLink() {
+    if (referralLink) {
+      navigator.clipboard.writeText(referralLink);
+      alert("Link copiado para a área de transferência!");
+    }
+  }
 
   async function loadUserData() {
     try {
@@ -37,6 +80,7 @@ export function ProfilePage() {
         document: user.document || "",
         currency: user.currency || "BRL",
         balance: user.balance || 0,
+        bonus_balance: user.bonus_balance || 0,
         is_admin: user.is_admin || false
       });
       // Atualizar localStorage também
@@ -207,6 +251,147 @@ export function ProfilePage() {
           label="Gestão retiradas"
           onClick={() => handleMenuClick("gestao-retiradas")}
         />
+      </section>
+
+      {/* Seção de Indicação */}
+      <section className="profile-section" style={{
+        background: "var(--bg-card)",
+        borderRadius: "12px",
+        padding: "20px",
+        marginBottom: "20px",
+        border: "1px solid rgba(246, 196, 83, 0.2)"
+      }}>
+        <h2 style={{
+          margin: "0 0 16px 0",
+          color: "var(--gold)",
+          fontSize: "18px",
+          fontWeight: "bold"
+        }}>
+          🎁 Indique e Ganhe
+        </h2>
+        
+        {loadingReferral ? (
+          <p style={{ color: "var(--text-muted)" }}>Carregando...</p>
+        ) : (
+          <>
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{
+                margin: "0 0 8px 0",
+                color: "var(--text-muted)",
+                fontSize: "14px"
+              }}>
+                Seu link de indicação:
+              </p>
+              <div style={{
+                display: "flex",
+                gap: "8px",
+                alignItems: "center"
+              }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={referralLink}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    background: "var(--bg-elevated)",
+                    border: "1px solid rgba(246, 196, 83, 0.3)",
+                    borderRadius: "8px",
+                    color: "var(--text-main)",
+                    fontSize: "12px"
+                  }}
+                />
+                <button
+                  onClick={copyReferralLink}
+                  style={{
+                    padding: "10px 16px",
+                    background: "var(--gold)",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#000",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    fontSize: "12px"
+                  }}
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            {referralStats && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+                marginTop: "16px"
+              }}>
+                <div style={{
+                  background: "var(--bg-elevated)",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  textAlign: "center"
+                }}>
+                  <p style={{
+                    margin: "0 0 4px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Indicados
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: "var(--gold)",
+                    fontSize: "20px",
+                    fontWeight: "bold"
+                  }}>
+                    {referralStats.totalReferrals}
+                  </p>
+                </div>
+                <div style={{
+                  background: "var(--bg-elevated)",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  textAlign: "center"
+                }}>
+                  <p style={{
+                    margin: "0 0 4px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Bônus Disponível
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: "var(--gold)",
+                    fontSize: "20px",
+                    fontWeight: "bold"
+                  }}>
+                    R$ {referralStats.bonusBalance.toFixed(2).replace(".", ",")}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div style={{
+              marginTop: "16px",
+              padding: "12px",
+              background: "rgba(246, 196, 83, 0.1)",
+              borderRadius: "8px",
+              fontSize: "12px",
+              color: "var(--text-main)"
+            }}>
+              <p style={{ margin: "0 0 8px 0", fontWeight: "bold", color: "var(--gold)" }}>
+                Como funciona:
+              </p>
+              <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                <li>Compartilhe seu link com amigos</li>
+                <li>Quando alguém se cadastrar pelo seu link e jogar R$ 100, você ganha R$ 30 em bônus!</li>
+                <li>O bônus pode ser usado para jogar, mas não pode ser sacado</li>
+              </ul>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="profile-menu">
