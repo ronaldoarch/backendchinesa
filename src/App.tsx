@@ -7,6 +7,7 @@ import { PromotionsPage } from "./pages/PromotionsPage";
 import { DepositPage } from "./pages/DepositPage";
 import { SupportPage } from "./pages/SupportPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { GamePage } from "./pages/GamePage";
 import { SideMenu } from "./components/SideMenu";
 import { AuthModal } from "./components/AuthModal";
@@ -310,6 +311,7 @@ export function App() {
             />
             <Route path="/deposito" element={<DepositPage />} />
             <Route path="/suporte" element={<SupportPage />} />
+            <Route path="/relatorios" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route
               path="/perfil"
               element={

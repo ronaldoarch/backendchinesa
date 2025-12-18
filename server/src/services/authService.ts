@@ -14,6 +14,8 @@ export type User = {
   balance?: number;
   bonus_balance?: number;
   total_deposit_amount?: number;
+  total_withdrawal_amount?: number;
+  total_bet_amount?: number;
   vip_level?: number;
   pix_key?: string | null;
   is_admin: boolean;
@@ -131,6 +133,8 @@ export async function findUserById(id: number): Promise<User | null> {
               COALESCE(balance, 0) as balance, 
               COALESCE(bonus_balance, 0) as bonus_balance, 
               COALESCE(total_deposit_amount, 0) as total_deposit_amount,
+              COALESCE(total_withdrawal_amount, 0) as total_withdrawal_amount,
+              COALESCE(total_bet_amount, 0) as total_bet_amount,
               COALESCE(vip_level, 0) as vip_level,
               pix_key, is_admin, COALESCE(user_type, 'user') as user_type, created_at 
        FROM users WHERE id = ?`,

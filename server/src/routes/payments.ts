@@ -10,6 +10,7 @@ import {
   cancelTransactionController,
   testConnectionController
 } from "../controllers/paymentsController";
+import { getReportsController } from "../controllers/reportsController";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
@@ -40,6 +41,7 @@ paymentsRouter.post("/withdraw", authenticate, asyncHandler(createWithdrawContro
 paymentsRouter.get("/transactions", authenticate, asyncHandler(listTransactionsController));
 paymentsRouter.get("/transactions/:requestNumber", authenticate, asyncHandler(getTransactionController));
 paymentsRouter.post("/transactions/:requestNumber/cancel", authenticate, asyncHandler(cancelTransactionController));
+paymentsRouter.get("/reports", authenticate, asyncHandler(getReportsController));
 paymentsRouter.post("/test-connection", authenticate, requireAdmin, asyncHandler(testConnectionController));
 
 // Webhook público (não requer autenticação, mas valida hash)

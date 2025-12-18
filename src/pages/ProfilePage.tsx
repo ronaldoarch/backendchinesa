@@ -11,6 +11,9 @@ type UserData = {
   currency: string;
   balance: number;
   bonus_balance?: number;
+  total_deposit_amount?: number;
+  total_withdrawal_amount?: number;
+  total_bet_amount?: number;
   is_admin: boolean;
 };
 
@@ -81,6 +84,9 @@ export function ProfilePage() {
         currency: user.currency || "BRL",
         balance: user.balance || 0,
         bonus_balance: user.bonus_balance || 0,
+        total_deposit_amount: user.total_deposit_amount || 0,
+        total_withdrawal_amount: user.total_withdrawal_amount || 0,
+        total_bet_amount: user.total_bet_amount || 0,
         is_admin: user.is_admin || false
       });
       // Atualizar localStorage também
@@ -110,8 +116,7 @@ export function ProfilePage() {
         alert("Página de apostas em desenvolvimento");
         break;
       case "relatorio":
-        // TODO: Implementar página de relatório
-        alert("Página de relatório em desenvolvimento");
+        navigate("/relatorios");
         break;
       case "gestao-retiradas":
         // TODO: Implementar página de gestão de retiradas
@@ -225,6 +230,63 @@ export function ProfilePage() {
           <span>Aposta para promoção</span>
           <div className="profile-progress-bar">
             <div className="profile-progress-fill" style={{ width: "0%" }} />
+          </div>
+        </div>
+      </section>
+
+      {/* Informações Financeiras (sem juros e fundo) */}
+      <section style={{
+        background: "rgba(255, 255, 255, 0.05)",
+        borderRadius: "12px",
+        padding: "16px",
+        marginBottom: "16px"
+      }}>
+        <h3 style={{ 
+          fontSize: "14px", 
+          fontWeight: "600", 
+          marginBottom: "12px",
+          color: "#fff"
+        }}>
+          Informações Financeiras
+        </h3>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "12px",
+          fontSize: "13px"
+        }}>
+          <div>
+            <div style={{ color: "rgba(255, 255, 255, 0.6)", marginBottom: "4px" }}>
+              Total Depositado
+            </div>
+            <div style={{ color: "#4ade80", fontWeight: "600" }}>
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: userData.currency || "BRL"
+              }).format(userData.total_deposit_amount || 0)}
+            </div>
+          </div>
+          <div>
+            <div style={{ color: "rgba(255, 255, 255, 0.6)", marginBottom: "4px" }}>
+              Total Sacado
+            </div>
+            <div style={{ color: "#ef4444", fontWeight: "600" }}>
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: userData.currency || "BRL"
+              }).format(userData.total_withdrawal_amount || 0)}
+            </div>
+          </div>
+          <div style={{ gridColumn: "span 2" }}>
+            <div style={{ color: "rgba(255, 255, 255, 0.6)", marginBottom: "4px" }}>
+              Total Apostado
+            </div>
+            <div style={{ color: "#f6c453", fontWeight: "600" }}>
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: userData.currency || "BRL"
+              }).format(userData.total_bet_amount || 0)}
+            </div>
           </div>
         </div>
       </section>
