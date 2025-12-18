@@ -16,6 +16,7 @@ import { managersRouter } from "./managers";
 import { affiliatesRouter } from "./affiliates";
 import { commissionsRouter } from "./commissions";
 import { referralsRouter } from "./referrals";
+import { vipRouter } from "./vip";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 export const apiRouter = Router();
@@ -197,6 +198,8 @@ apiRouter.use("/affiliates", affiliatesRouter);
 apiRouter.use("/commissions", commissionsRouter);
 // Indicações (proteção aplicada no próprio router)
 apiRouter.use("/referrals", referralsRouter);
+// VIP (proteção aplicada no próprio router)
+apiRouter.use("/vip", vipRouter);
 // Protegidas
 apiRouter.use("/uploads", authenticate, requireAdmin, uploadsRouter);
 apiRouter.use("/playfivers", authenticate, requireAdmin, playfiversRouter);

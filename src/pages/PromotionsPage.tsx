@@ -321,6 +321,28 @@ function TarefaView() {
 }
 
 function VipLevelsView({ user }: { user: { username: string } | null }) {
+  const [vipData, setVipData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"bonus" | "privileges">("bonus");
+
+  useEffect(() => {
+    if (user) {
+      loadVipData();
+    }
+  }, [user]);
+
+  async function loadVipData() {
+    try {
+      setLoading(true);
+      const response = await api.get("/vip/data");
+      setVipData(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar dados VIP:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!user) {
     return (
       <div className="promos-empty">
@@ -329,13 +351,31 @@ function VipLevelsView({ user }: { user: { username: string } | null }) {
     );
   }
 
-  const levels = [
-    { level: 0, requiredBet: "0", levelBonus: "0,00" },
-    { level: 1, requiredBet: "5.000", levelBonus: "5,00" },
-    { level: 2, requiredBet: "13.000", levelBonus: "18,00" },
-    { level: 3, requiredBet: "93.000", levelBonus: "28,00" },
-    { level: 4, requiredBet: "89.000", levelBonus: "58,00" }
-  ];
+  if (loading) {
+    return (
+      <div className="promos-empty">
+        Carregando dados VIP...
+      </div>
+    );
+  }
+
+  if (!vipData) {
+    return (
+      <div className="promos-empty">
+        Erro ao carregar dados VIP.
+      </div>
+    );
+  }
+
+  const { currentLevel, totalDeposit, nextLevel, remainingForNext, allLevels } = vipData;
+  const currentLevelInfo = allLevels?.find((l: any) => l.level === currentLevel) || allLevels?.[0];
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
 
   return (
     <div className="vip-wrapper">
@@ -343,8 +383,16 @@ function VipLevelsView({ user }: { user: { username: string } | null }) {
         <div>
           <span className="promos-badge">Nível atual</span>
           <p className="vip-text">
-            Restantes <strong>VIP 1</strong> — você precisa apostar{" "}
-            <strong>5.000,00</strong>
+            {nextLevel ? (
+              <>
+                Restantes <strong>VIP {nextLevel.level}</strong> — você precisa depositar{" "}
+                <strong>{formatCurrency(remainingForNext)}</strong>
+              </>
+            ) : (
+              <>
+                Você atingiu o nível máximo <strong>VIP {currentLevel}</strong>
+              </>
+            )}
           </p>
         </div>
         <button className="btn btn-gold">Receber tudo</button>
@@ -353,30 +401,61 @@ function VipLevelsView({ user }: { user: { username: string } | null }) {
       <h3 className="vip-title">Lista de níveis VIP</h3>
 
       <div className="vip-subtabs">
-        <button className="vip-subtab vip-subtab-active">
+        <button 
+          className={`vip-subtab ${activeTab === "bonus" ? "vip-subtab-active" : ""}`}
+          onClick={() => setActiveTab("bonus")}
+        >
           Bônus de aumento de nível
         </button>
-        <button className="vip-subtab">Privilégio VIP</button>
+        <button 
+          className={`vip-subtab ${activeTab === "privileges" ? "vip-subtab-active" : ""}`}
+          onClick={() => setActiveTab("privileges")}
+        >
+          Privilégio VIP
+        </button>
       </div>
 
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Nível</th>
-            <th>Aposta para promoção</th>
-            <th>Bônus de aumento de nível</th>
-          </tr>
-        </thead>
-        <tbody>
-          {levels.map((l) => (
-            <tr key={l.level}>
-              <td>VIP {l.level}</td>
-              <td>{l.requiredBet}</td>
-              <td>{l.levelBonus}</td>
+      {activeTab === "bonus" ? (
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Nível</th>
+              <th>Depósito para promoção</th>
+              <th>Bônus de aumento de nível</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {allLevels?.map((level: any) => (
+              <tr key={level.level}>
+                <td>VIP {level.level}</td>
+                <td>{formatCurrency(level.requiredDeposit)}</td>
+                <td>R$ {formatCurrency(level.levelBonus)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Nível</th>
+              <th>Limite diário de saques</th>
+              <th>Número de saques diários</th>
+              <th>Isenção de taxas diárias</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allLevels?.map((level: any) => (
+              <tr key={level.level}>
+                <td>VIP {level.level}</td>
+                <td>{level.privileges.dailyWithdrawLimit}</td>
+                <td>{level.privileges.dailyWithdrawCount}</td>
+                <td>{level.privileges.dailyFeeExemption} transações</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

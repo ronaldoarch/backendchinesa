@@ -13,6 +13,7 @@ import { applyBonusToDeposit } from "../services/bonusService";
 import { dispatchEvent } from "../services/trackingService";
 import { pool } from "../config/database";
 import { env } from "../config/env";
+import { updateUserVipLevel } from "../services/vipService";
 
 const pixRequestSchema = z.object({
   amount: z.number().positive(),
@@ -609,6 +610,27 @@ export async function webhookController(req: Request, res: Response): Promise<vo
       // Atualizar saldo do usuário
       await updateUserBalance(transaction.userId, transaction.amount);
       console.log(`✅ Saldo atualizado para usuário ${transaction.userId}: +${transaction.amount}`);
+
+      // Atualizar total de depósitos e nível VIP
+      if (transaction.amount > 0 && transaction.paymentMethod !== "WITHDRAW") {
+        try {
+          await pool.query(
+            `UPDATE users 
+             SET total_deposit_amount = COALESCE(total_deposit_amount, 0) + ?, 
+                 last_deposit_at = NOW()
+             WHERE id = ?`,
+            [transaction.amount, transaction.userId]
+          );
+          console.log(`💰 Total de depósitos atualizado para usuário ${transaction.userId}: +${transaction.amount}`);
+          
+          // Recalcular nível VIP
+          const newVipLevel = await updateUserVipLevel(transaction.userId);
+          console.log(`⭐ Nível VIP atualizado para usuário ${transaction.userId}: ${newVipLevel}`);
+        } catch (error: any) {
+          console.error("Erro ao atualizar depósitos/VIP:", error);
+          // Não bloquear o processamento do webhook se houver erro
+        }
+      }
 
       // Aplicar bônus automático (se houver)
       if (transaction.amount > 0) {

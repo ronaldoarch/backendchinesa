@@ -220,6 +220,8 @@ export async function meController(req: Request, res: Response): Promise<void> {
     currency: user.currency,
     balance: user.balance || 0,
     bonus_balance: user.bonus_balance || 0,
+    total_deposit_amount: user.total_deposit_amount || 0,
+    vip_level: user.vip_level || 0,
     pix_key: user.pix_key || null,
     is_admin: user.is_admin,
     user_type: user.user_type || "user"
