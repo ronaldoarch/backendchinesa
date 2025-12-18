@@ -522,7 +522,7 @@ export function HomePage() {
                   margin: "0 0 8px 0",
                   fontSize: "18px"
                 }}>
-                  💰 Baú de 30 reais
+                  💰 Baú de Indicação
                 </h3>
                 <p style={{ 
                   color: "var(--text-main)", 
@@ -530,7 +530,7 @@ export function HomePage() {
                   fontSize: "14px",
                   lineHeight: "1.5"
                 }}>
-                  Aposte R$ 100,00 e ganhe R$ 30,00 de bônus!
+                  Compartilhe seu link de indicação e ganhe R$ 30 quando alguém se cadastrar e jogar R$ 100!
                 </p>
                 <button
                   onClick={() => {

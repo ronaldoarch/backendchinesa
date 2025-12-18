@@ -198,11 +198,29 @@ export async function initDb() {
           ADD COLUMN referral_code VARCHAR(20) UNIQUE NULL,
           ADD COLUMN bonus_balance DECIMAL(10, 2) DEFAULT 0.00,
           ADD COLUMN referred_by INT NULL,
+          ADD COLUMN pix_key VARCHAR(255) NULL,
           ADD INDEX idx_referral_code (referral_code),
           ADD INDEX idx_referred_by (referred_by),
           ADD FOREIGN KEY (referred_by) REFERENCES users(id) ON DELETE SET NULL
         `);
-        console.log("✅ Colunas de indicação adicionadas à tabela users");
+        console.log("✅ Colunas de indicação e pix_key adicionadas à tabela users");
+      } else {
+        // Verificar se pix_key existe
+        const [pixKeyColumns] = await connection.query<RowDataPacket[]>(
+          `SELECT COLUMN_NAME 
+           FROM INFORMATION_SCHEMA.COLUMNS 
+           WHERE TABLE_SCHEMA = DATABASE() 
+           AND TABLE_NAME = 'users' 
+           AND COLUMN_NAME = 'pix_key'`
+        );
+        
+        if (!pixKeyColumns || pixKeyColumns.length === 0) {
+          await connection.query(`
+            ALTER TABLE users 
+            ADD COLUMN pix_key VARCHAR(255) NULL
+          `);
+          console.log("✅ Coluna pix_key adicionada à tabela users");
+        }
       }
     } catch (error: any) {
       console.warn("⚠️ Aviso ao verificar/adicionar colunas de indicação:", error.message);

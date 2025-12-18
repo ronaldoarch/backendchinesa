@@ -151,14 +151,13 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
 }
 
 function TarefaView() {
+  const [showPixModal, setShowPixModal] = useState(false);
+  const [pixKey, setPixKey] = useState("");
+  const [loadingPix, setLoadingPix] = useState(false);
+  
   const initialTasks = [
-    { id: "birthday", title: "Definir aniversário", bonus: "1,00", completed: false },
-    { id: "withdraw_password", title: "Definir senha de saque", bonus: "1,00", completed: false },
     { id: "withdraw_account", title: "Adicionar conta de saque", bonus: "1,00", completed: false },
-    { id: "avatar", title: "Definir avatar", bonus: "1,00", completed: false },
-    { id: "email", title: "Adicionar conta de email", bonus: "3,00", completed: false },
-    { id: "first_withdraw", title: "Primeira retirada", bonus: "1,00", completed: false },
-    { id: "treasure_100", title: "Baú de 30 reais para 100 apostados", bonus: "30,00", completed: false, requiredBet: 100 }
+    { id: "treasure_referral", title: "Baú de indicação", bonus: "30,00", completed: false }
   ];
   
   const [tasks, setTasks] = useState(initialTasks);
@@ -177,18 +176,35 @@ function TarefaView() {
       // Verificar status das tarefas usando initialTasks como base
       const updatedTasks = await Promise.all(
         initialTasks.map(async (task) => {
-          if (task.id === "treasure_100") {
+          if (task.id === "withdraw_account") {
             try {
-              // Verificar se já resgatou ou se atingiu 100 em apostas
-              const rewardStatus = await api.get(`/rewards/status/${task.id}`);
+              // Verificar se já cadastrou chave PIX
+              const userResponse = await api.get("/auth/me");
+              const hasPixKey = !!userResponse.data.pix_key;
+              const rewardStatus = await api.get(`/rewards/status/${task.id}`).catch(() => null);
               return {
                 ...task,
                 completed: rewardStatus?.data?.redeemed || false,
-                progress: rewardStatus?.data?.totalBet || 0,
-                canRedeem: (rewardStatus?.data?.totalBet || 0) >= 100 && !rewardStatus?.data?.redeemed
+                hasPixKey
               };
             } catch (error) {
-              // Se não estiver autenticado ou houver erro, retornar task sem progresso
+              return task;
+            }
+          }
+          if (task.id === "treasure_referral") {
+            try {
+              // Verificar estatísticas de indicação
+              const referralStats = await api.get("/referrals/stats");
+              const referralsWithBonus = referralStats.data.referrals.filter((r: any) => r.bonusCredited).length;
+              const rewardStatus = await api.get(`/rewards/status/${task.id}`).catch(() => null);
+              return {
+                ...task,
+                completed: rewardStatus?.data?.redeemed || false,
+                progress: referralsWithBonus,
+                canRedeem: referralsWithBonus > 0 && !rewardStatus?.data?.redeemed,
+                description: `Ganhe R$ 30 quando alguém se cadastrar pelo seu link e jogar R$ 100. Você já ganhou ${referralsWithBonus} bau(s)!`
+              };
+            } catch (error) {
               return task;
             }
           }
@@ -204,6 +220,12 @@ function TarefaView() {
   }
 
   async function handleRedeem(taskId: string) {
+    if (taskId === "withdraw_account") {
+      // Abrir modal para cadastrar chave PIX
+      setShowPixModal(true);
+      return;
+    }
+    
     try {
       const response = await api.post(`/rewards/redeem`, { rewardId: taskId });
       if (response.data.success) {
@@ -212,6 +234,32 @@ function TarefaView() {
       }
     } catch (error: any) {
       alert(error.response?.data?.message || "Erro ao resgatar recompensa");
+    }
+  }
+
+  async function handleSavePixKey() {
+    if (!pixKey || pixKey.trim() === "") {
+      alert("Por favor, informe a chave PIX");
+      return;
+    }
+
+    setLoadingPix(true);
+    try {
+      const response = await api.post("/rewards/redeem", { 
+        rewardId: "withdraw_account",
+        pixKey: pixKey.trim()
+      });
+      
+      if (response.data.success) {
+        alert("Chave PIX cadastrada com sucesso! Você ganhou R$ 1,00 em bônus!");
+        setShowPixModal(false);
+        setPixKey("");
+        await loadUserData();
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao cadastrar chave PIX");
+    } finally {
+      setLoadingPix(false);
     }
   }
 
@@ -230,27 +278,49 @@ function TarefaView() {
               <div>
                 <h3>{task.title}</h3>
                 <p className="promo-task-bonus">Bônus R$ {task.bonus}</p>
-                {task.id === "treasure_100" && "progress" in task && (
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                    Progresso: R$ {new Intl.NumberFormat("pt-BR", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    }).format(task.progress || 0)} / R$ 100,00
+                {task.id === "withdraw_account" && "hasPixKey" in task && task.hasPixKey && (
+                  <p style={{ fontSize: "12px", color: "var(--gold)", marginTop: "4px" }}>
+                    ✓ Chave PIX cadastrada
                   </p>
                 )}
+                {task.id === "treasure_referral" && (
+                  <div style={{ marginTop: "8px" }}>
+                    <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>
+                      Ganhe R$ 30 quando alguém se cadastrar pelo seu link e jogar R$ 100
+                    </p>
+                    {"progress" in task && (
+                      <p style={{ fontSize: "12px", color: "var(--gold)", fontWeight: "bold" }}>
+                        Baús ganhos: {task.progress || 0} | Total: R$ {((task.progress || 0) * 30).toFixed(2).replace(".", ",")}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              <button 
-                type="button" 
-                className="promo-task-cta"
-                onClick={() => handleRedeem(task.id)}
-                disabled={task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false))}
-                style={{
-                  opacity: task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false)) ? 0.5 : 1,
-                  cursor: task.completed || (task.id === "treasure_100" && !("canRedeem" in task ? task.canRedeem : false)) ? "not-allowed" : "pointer"
-                }}
-              >
-                {task.completed ? "Resgatado" : "Resgatar"}
-              </button>
+              {task.id === "treasure_referral" ? (
+                <div style={{
+                  padding: "8px 12px",
+                  background: "rgba(246, 196, 83, 0.1)",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  color: "var(--text-muted)",
+                  textAlign: "center"
+                }}>
+                  Bônus creditado automaticamente
+                </div>
+              ) : (
+                <button 
+                  type="button" 
+                  className="promo-task-cta"
+                  onClick={() => handleRedeem(task.id)}
+                  disabled={task.completed}
+                  style={{
+                    opacity: task.completed ? 0.5 : 1,
+                    cursor: task.completed ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {task.completed ? "Resgatado" : "Cadastrar PIX"}
+                </button>
+              )}
             </article>
           ))
         )}
