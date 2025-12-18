@@ -69,6 +69,7 @@ export function DepositPage() {
     async function loadUserPixKey() {
       try {
         const userResponse = await api.get("/auth/me");
+        setUser(userResponse.data);
         if (userResponse.data.pix_key) {
           setPixKey(userResponse.data.pix_key);
         }
