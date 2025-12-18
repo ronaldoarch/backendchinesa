@@ -30,7 +30,7 @@ export function ProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editModal, setEditModal] = useState<"dados" | "senha" | null>(null);
+  const [editModal, setEditModal] = useState<"dados" | "senha" | "agente" | null>(null);
   const [referralLink, setReferralLink] = useState<string>("");
   const [referralCode, setReferralCode] = useState<string>("");
   const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
@@ -118,8 +118,7 @@ export function ProfilePage() {
         alert("Página de gestão de retiradas em desenvolvimento");
         break;
       case "agente":
-        // TODO: Implementar página de agente
-        alert("Página de agente em desenvolvimento");
+        setEditModal("agente");
         break;
       case "dados":
         setEditModal("dados");
@@ -253,147 +252,6 @@ export function ProfilePage() {
         />
       </section>
 
-      {/* Seção de Indicação */}
-      <section className="profile-section" style={{
-        background: "var(--bg-card)",
-        borderRadius: "12px",
-        padding: "20px",
-        marginBottom: "20px",
-        border: "1px solid rgba(246, 196, 83, 0.2)"
-      }}>
-        <h2 style={{
-          margin: "0 0 16px 0",
-          color: "var(--gold)",
-          fontSize: "18px",
-          fontWeight: "bold"
-        }}>
-          🎁 Indique e Ganhe
-        </h2>
-        
-        {loadingReferral ? (
-          <p style={{ color: "var(--text-muted)" }}>Carregando...</p>
-        ) : (
-          <>
-            <div style={{ marginBottom: "16px" }}>
-              <p style={{
-                margin: "0 0 8px 0",
-                color: "var(--text-muted)",
-                fontSize: "14px"
-              }}>
-                Seu link de indicação:
-              </p>
-              <div style={{
-                display: "flex",
-                gap: "8px",
-                alignItems: "center"
-              }}>
-                <input
-                  type="text"
-                  readOnly
-                  value={referralLink}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    background: "var(--bg-elevated)",
-                    border: "1px solid rgba(246, 196, 83, 0.3)",
-                    borderRadius: "8px",
-                    color: "var(--text-main)",
-                    fontSize: "12px"
-                  }}
-                />
-                <button
-                  onClick={copyReferralLink}
-                  style={{
-                    padding: "10px 16px",
-                    background: "var(--gold)",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "#000",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    fontSize: "12px"
-                  }}
-                >
-                  Copiar
-                </button>
-              </div>
-            </div>
-
-            {referralStats && (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
-                marginTop: "16px"
-              }}>
-                <div style={{
-                  background: "var(--bg-elevated)",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  textAlign: "center"
-                }}>
-                  <p style={{
-                    margin: "0 0 4px 0",
-                    color: "var(--text-muted)",
-                    fontSize: "12px"
-                  }}>
-                    Indicados
-                  </p>
-                  <p style={{
-                    margin: 0,
-                    color: "var(--gold)",
-                    fontSize: "20px",
-                    fontWeight: "bold"
-                  }}>
-                    {referralStats.totalReferrals}
-                  </p>
-                </div>
-                <div style={{
-                  background: "var(--bg-elevated)",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  textAlign: "center"
-                }}>
-                  <p style={{
-                    margin: "0 0 4px 0",
-                    color: "var(--text-muted)",
-                    fontSize: "12px"
-                  }}>
-                    Bônus Disponível
-                  </p>
-                  <p style={{
-                    margin: 0,
-                    color: "var(--gold)",
-                    fontSize: "20px",
-                    fontWeight: "bold"
-                  }}>
-                    R$ {referralStats.bonusBalance.toFixed(2).replace(".", ",")}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div style={{
-              marginTop: "16px",
-              padding: "12px",
-              background: "rgba(246, 196, 83, 0.1)",
-              borderRadius: "8px",
-              fontSize: "12px",
-              color: "var(--text-main)"
-            }}>
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold", color: "var(--gold)" }}>
-                Como funciona:
-              </p>
-              <ul style={{ margin: 0, paddingLeft: "20px" }}>
-                <li>Compartilhe seu link com amigos</li>
-                <li>Quando alguém se cadastrar pelo seu link e jogar R$ 100, você ganha R$ 30 em bônus!</li>
-                <li>O bônus pode ser usado para jogar, mas não pode ser sacado</li>
-              </ul>
-            </div>
-          </>
-        )}
-      </section>
-
       <section className="profile-menu">
         <ProfileMenuItem
           label="Agente"
@@ -441,6 +299,16 @@ export function ProfilePage() {
       {editModal === "senha" && (
         <EditPasswordModal
           onClose={() => setEditModal(null)}
+        />
+      )}
+
+      {editModal === "agente" && (
+        <AgentModal
+          referralLink={referralLink}
+          referralStats={referralStats}
+          loadingReferral={loadingReferral}
+          onClose={() => setEditModal(null)}
+          onCopyLink={copyReferralLink}
         />
       )}
     </div>
@@ -602,6 +470,206 @@ function EditDataModal({ userData, onClose, onSuccess }: EditDataModalProps) {
 type EditPasswordModalProps = {
   onClose: () => void;
 };
+
+type AgentModalProps = {
+  referralLink: string;
+  referralStats: ReferralStats | null;
+  loadingReferral: boolean;
+  onClose: () => void;
+  onCopyLink: () => void;
+};
+
+function AgentModal({ referralLink, referralStats, loadingReferral, onClose, onCopyLink }: AgentModalProps) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0, 0, 0, 0.8)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10000,
+        padding: "20px"
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--bg-card)",
+          borderRadius: "16px",
+          padding: "24px",
+          maxWidth: "500px",
+          width: "100%",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          border: "2px solid var(--gold)"
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px"
+        }}>
+          <h2 style={{
+            margin: 0,
+            color: "var(--gold)",
+            fontSize: "20px",
+            fontWeight: "bold"
+          }}>
+            🎁 Indique e Ganhe
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              fontSize: "24px",
+              cursor: "pointer",
+              padding: "0",
+              width: "30px",
+              height: "30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {loadingReferral ? (
+          <p style={{ color: "var(--text-muted)", textAlign: "center" }}>Carregando...</p>
+        ) : (
+          <>
+            <div style={{ marginBottom: "20px" }}>
+              <p style={{
+                margin: "0 0 8px 0",
+                color: "var(--text-muted)",
+                fontSize: "14px"
+              }}>
+                Seu link de indicação:
+              </p>
+              <div style={{
+                display: "flex",
+                gap: "8px",
+                alignItems: "center"
+              }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={referralLink}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "var(--bg-elevated)",
+                    border: "1px solid rgba(246, 196, 83, 0.3)",
+                    borderRadius: "8px",
+                    color: "var(--text-main)",
+                    fontSize: "14px"
+                  }}
+                />
+                <button
+                  onClick={onCopyLink}
+                  style={{
+                    padding: "12px 20px",
+                    background: "var(--gold)",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#000",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            {referralStats && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+                marginBottom: "20px"
+              }}>
+                <div style={{
+                  background: "var(--bg-elevated)",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  textAlign: "center"
+                }}>
+                  <p style={{
+                    margin: "0 0 8px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Indicados
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: "var(--gold)",
+                    fontSize: "24px",
+                    fontWeight: "bold"
+                  }}>
+                    {referralStats.totalReferrals}
+                  </p>
+                </div>
+                <div style={{
+                  background: "var(--bg-elevated)",
+                  padding: "16px",
+                  borderRadius: "8px",
+                  textAlign: "center"
+                }}>
+                  <p style={{
+                    margin: "0 0 8px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "12px"
+                  }}>
+                    Bônus Disponível
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: "var(--gold)",
+                    fontSize: "24px",
+                    fontWeight: "bold"
+                  }}>
+                    R$ {referralStats.bonusBalance.toFixed(2).replace(".", ",")}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div style={{
+              padding: "16px",
+              background: "rgba(246, 196, 83, 0.1)",
+              borderRadius: "8px",
+              fontSize: "14px",
+              color: "var(--text-main)"
+            }}>
+              <p style={{ margin: "0 0 12px 0", fontWeight: "bold", color: "var(--gold)" }}>
+                Como funciona:
+              </p>
+              <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "1.8" }}>
+                <li>Compartilhe seu link com amigos</li>
+                <li>Quando alguém se cadastrar pelo seu link e jogar R$ 100, você ganha R$ 30 em bônus!</li>
+                <li>O bônus pode ser usado para jogar, mas não pode ser sacado</li>
+              </ul>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function EditPasswordModal({ onClose }: EditPasswordModalProps) {
   const [currentPassword, setCurrentPassword] = useState("");
