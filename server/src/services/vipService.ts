@@ -58,7 +58,7 @@ export const VIP_LEVELS: VipLevel[] = [
   },
   {
     level: 4,
-    requiredDeposit: 182000, // 93000 + 89000
+    requiredDeposit: 182000, // 93000 + 89000 (soma acumulada)
     levelBonus: 58,
     privileges: {
       dailyWithdrawLimit: "Ilimitado",
