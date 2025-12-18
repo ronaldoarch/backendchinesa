@@ -10,6 +10,7 @@ import { AdminPromotionsPage } from "./admin/AdminPromotionsPage";
 import { AdminSuitPayPage } from "./admin/AdminSuitPayPage";
 import { AdminTrackingPage } from "./admin/AdminTrackingPage";
 import { AdminBonusesPage } from "./admin/AdminBonusesPage";
+import { AdminManagersPage } from "./admin/AdminManagersPage";
 
 export function AdminPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,6 +119,15 @@ export function AdminPage() {
           >
             Bônus
           </NavLink>
+          <NavLink
+            to="/admin/gerentes"
+            className={({ isActive }) =>
+              `admin-menu-item${isActive ? " active" : ""}`
+            }
+            onClick={() => setMenuOpen(false)}
+          >
+            Gerentes
+          </NavLink>
         </nav>
       </aside>
 
@@ -133,6 +143,7 @@ export function AdminPage() {
           <Route path="suitpay" element={<AdminSuitPayPage />} />
           <Route path="tracking" element={<AdminTrackingPage />} />
           <Route path="bonus" element={<AdminBonusesPage />} />
+          <Route path="gerentes" element={<AdminManagersPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
       </div>

@@ -30,9 +30,21 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [currency, setCurrency] = useState("BRL");
+  const [referralCode, setReferralCode] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Buscar código de referência da URL
+  useEffect(() => {
+    if (open && mode === "register") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get("ref");
+      if (ref) {
+        setReferralCode(ref);
+      }
+    }
+  }, [open, mode]);
 
   // eslint-disable-next-line no-console
   console.log("AuthModal renderizado:", { open, mode, initialMode });
@@ -75,7 +87,8 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
         username,
         password,
         phone: phone || undefined,
-        currency
+        currency,
+        referralCode: referralCode || undefined
       });
 
       // eslint-disable-next-line no-console
@@ -312,7 +325,7 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
               </label>
 
               <label>
-                <span>* Telefone</span>
+                <span>Telefone</span>
                 <div className="input-group">
                   <span className="input-prefix">+55</span>
                   <input
@@ -322,6 +335,15 @@ export function AuthModal({ open, onClose, onSuccess, initialMode = "register" }
                     required
                   />
                 </div>
+              </label>
+
+              <label>
+                <span>Código de Referência (opcional)</span>
+                <input
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="Digite o código"
+                />
               </label>
 
               <label>

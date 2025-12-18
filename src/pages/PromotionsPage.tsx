@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, getUser } from "../services/api";
 
 type Props = {
@@ -19,9 +20,18 @@ type Promotion = {
 };
 
 export function PromotionsPage({ user, onRequireAuth }: Props) {
-  const [tab, setTab] = useState<Tab>("eventos");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(tabFromUrl || "eventos");
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Atualizar tab quando a URL mudar
+  useEffect(() => {
+    if (tabFromUrl && ["eventos", "vip", "rebate", "recompensas", "historico"].includes(tabFromUrl)) {
+      setTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   useEffect(() => {
     void loadPromotions();
@@ -44,6 +54,7 @@ export function PromotionsPage({ user, onRequireAuth }: Props) {
       return;
     }
     setTab(next);
+    setSearchParams({ tab: next });
   }
 
   return (
@@ -140,7 +151,7 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
 }
 
 function TarefaView() {
-  const [tasks, setTasks] = useState([
+  const initialTasks = [
     { id: "birthday", title: "Definir aniversário", bonus: "1,00", completed: false },
     { id: "withdraw_password", title: "Definir senha de saque", bonus: "1,00", completed: false },
     { id: "withdraw_account", title: "Adicionar conta de saque", bonus: "1,00", completed: false },
@@ -148,8 +159,9 @@ function TarefaView() {
     { id: "email", title: "Adicionar conta de email", bonus: "3,00", completed: false },
     { id: "first_withdraw", title: "Primeira retirada", bonus: "1,00", completed: false },
     { id: "treasure_100", title: "Baú de 30 reais para 100 apostados", bonus: "30,00", completed: false, requiredBet: 100 }
-  ]);
+  ];
   
+  const [tasks, setTasks] = useState(initialTasks);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -162,18 +174,23 @@ function TarefaView() {
       const response = await api.get("/auth/me");
       setUser(response.data);
       
-      // Verificar status das tarefas
+      // Verificar status das tarefas usando initialTasks como base
       const updatedTasks = await Promise.all(
-        tasks.map(async (task) => {
+        initialTasks.map(async (task) => {
           if (task.id === "treasure_100") {
-            // Verificar se já resgatou ou se atingiu 100 em apostas
-            const rewardStatus = await api.get(`/rewards/status/${task.id}`).catch(() => null);
-            return {
-              ...task,
-              completed: rewardStatus?.data?.redeemed || false,
-              progress: rewardStatus?.data?.totalBet || 0,
-              canRedeem: (rewardStatus?.data?.totalBet || 0) >= 100 && !rewardStatus?.data?.redeemed
-            };
+            try {
+              // Verificar se já resgatou ou se atingiu 100 em apostas
+              const rewardStatus = await api.get(`/rewards/status/${task.id}`);
+              return {
+                ...task,
+                completed: rewardStatus?.data?.redeemed || false,
+                progress: rewardStatus?.data?.totalBet || 0,
+                canRedeem: (rewardStatus?.data?.totalBet || 0) >= 100 && !rewardStatus?.data?.redeemed
+              };
+            } catch (error) {
+              // Se não estiver autenticado ou houver erro, retornar task sem progresso
+              return task;
+            }
           }
           return task;
         })
@@ -215,7 +232,10 @@ function TarefaView() {
                 <p className="promo-task-bonus">Bônus R$ {task.bonus}</p>
                 {task.id === "treasure_100" && "progress" in task && (
                   <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                    Progresso: R$ {task.progress?.toFixed(2) || "0,00"} / R$ 100,00
+                    Progresso: R$ {new Intl.NumberFormat("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    }).format(task.progress || 0)} / R$ 100,00
                   </p>
                 )}
               </div>

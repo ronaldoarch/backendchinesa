@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
 import { AdminPage } from "./pages/AdminPage";
+import { ManagerPage } from "./pages/ManagerPage";
 import { PromotionsPage } from "./pages/PromotionsPage";
 import { DepositPage } from "./pages/DepositPage";
 import { SupportPage } from "./pages/SupportPage";
@@ -9,7 +10,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { GamePage } from "./pages/GamePage";
 import { SideMenu } from "./components/SideMenu";
 import { AuthModal } from "./components/AuthModal";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute, ManagerRoute } from "./components/ProtectedRoute";
 import { getUser, removeAuthToken, setUser as saveUserToStorage, api } from "./services/api";
 import { HomeIcon, GiftIcon, CreditCardIcon, HeadphonesIcon, UserIcon } from "./components/Icons";
 import { DynamicFavicon } from "./components/DynamicFavicon";
@@ -197,6 +198,14 @@ export function App() {
                   Admin
                 </NavLink>
               )}
+              {(user as any).user_type === "manager" && (
+                <NavLink 
+                  to="/gerente" 
+                  className="btn btn-ghost"
+                >
+                  Gerente
+                </NavLink>
+              )}
               <button
                 className="btn btn-ghost"
                 onClick={() => {
@@ -323,6 +332,14 @@ export function App() {
                 <ProtectedRoute requireAdmin>
                   <AdminPage />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gerente/*"
+              element={
+                <ManagerRoute>
+                  <ManagerPage />
+                </ManagerRoute>
               }
             />
           </Routes>

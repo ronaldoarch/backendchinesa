@@ -35,12 +35,14 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
 
   return (
     <div
+      className="banner-image-container"
       style={{
         position: "relative",
         width: "100%",
-        aspectRatio: "16 / 9", // Proporção ideal para banners (16:9)
         borderRadius: "16px",
-        overflow: "hidden"
+        overflow: "hidden",
+        display: "block",
+        aspectRatio: "16 / 9"
       }}
     >
       <img
@@ -49,6 +51,7 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
         style={{
           width: "100%",
           height: "100%",
+          display: "block",
           objectFit: "cover"
         }}
         onError={(e) => {
@@ -69,7 +72,8 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
             left: 0,
             right: 0,
             background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
-            padding: "16px"
+            padding: "16px",
+            zIndex: 2
           }}
         >
           <h1 style={{ margin: 0, fontSize: "18px" }}>{title}</h1>
@@ -100,6 +104,7 @@ export function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [offerPopupImage, setOfferPopupImage] = useState<string | null>(null);
   const [settings, setSettings] = useState<any>({});
+  const [isManagerPopup, setIsManagerPopup] = useState(false);
 
   // Carregar favoritos do localStorage
   useEffect(() => {
@@ -120,11 +125,25 @@ export function HomePage() {
     const token = localStorage.getItem("token");
     if (savedUser && token) {
       setUser(savedUser);
-      // Verificar se já mostrou o popup hoje
-      const lastPopupDate = localStorage.getItem("offerPopupDate");
-      const today = new Date().toDateString();
-      if (lastPopupDate !== today) {
-        setShowOfferPopup(true);
+      
+      // Verificar tipo de usuário
+      const userType = (savedUser as any).user_type || (savedUser as any).userType;
+      
+      // Se for gerente, mostrar popup específico
+      if (userType === "manager") {
+        const lastManagerPopupDate = localStorage.getItem("managerOfferPopupDate");
+        const today = new Date().toDateString();
+        if (lastManagerPopupDate !== today) {
+          setIsManagerPopup(true);
+          setShowOfferPopup(true);
+        }
+      } else {
+        // Popup normal para outros usuários
+        const lastPopupDate = localStorage.getItem("offerPopupDate");
+        const today = new Date().toDateString();
+        if (lastPopupDate !== today) {
+          setShowOfferPopup(true);
+        }
       }
     }
   }, []);
@@ -314,7 +333,11 @@ export function HomePage() {
             <button
               onClick={() => {
                 setShowOfferPopup(false);
-                localStorage.setItem("offerPopupDate", new Date().toDateString());
+                if (isManagerPopup) {
+                  localStorage.setItem("managerOfferPopupDate", new Date().toDateString());
+                } else {
+                  localStorage.setItem("offerPopupDate", new Date().toDateString());
+                }
               }}
               style={{
                 position: "absolute",
@@ -359,59 +382,110 @@ export function HomePage() {
                 fontSize: "24px",
                 fontWeight: "bold"
               }}>
-                🎁 Oferta Especial!
+                {isManagerPopup ? "👔 Oferta para Gerentes!" : "🎁 Oferta Especial!"}
               </h2>
               <p style={{ color: "var(--text-main)", margin: 0, fontSize: "14px" }}>
-                Resgate seu bônus exclusivo
+                {isManagerPopup ? "Programa de comissões exclusivo" : "Resgate seu bônus exclusivo"}
               </p>
             </div>
 
-            <div style={{
-              background: "rgba(246, 196, 83, 0.1)",
-              border: "1px solid var(--gold)",
-              borderRadius: "12px",
-              padding: "16px",
-              marginBottom: "20px"
-            }}>
-              <h3 style={{ 
-                color: "var(--gold)", 
-                margin: "0 0 8px 0",
-                fontSize: "18px"
+            {isManagerPopup ? (
+              <div style={{
+                background: "rgba(246, 196, 83, 0.1)",
+                border: "1px solid var(--gold)",
+                borderRadius: "12px",
+                padding: "16px",
+                marginBottom: "20px"
               }}>
-                💰 Baú de 30 reais
-              </h3>
-              <p style={{ 
-                color: "var(--text-main)", 
-                margin: "0 0 12px 0",
-                fontSize: "14px",
-                lineHeight: "1.5"
+                <h3 style={{ 
+                  color: "var(--gold)", 
+                  margin: "0 0 8px 0",
+                  fontSize: "18px"
+                }}>
+                  💰 Ganhe 20% de Comissão
+                </h3>
+                <p style={{ 
+                  color: "var(--text-main)", 
+                  margin: "0 0 12px 0",
+                  fontSize: "14px",
+                  lineHeight: "1.5"
+                }}>
+                  <strong>Gerente, ganha 20% do positivo dentro de 1 semana.</strong><br />
+                  Fechamento toda segunda-feira.<br />
+                  Valor pode ser sacável porém só libera segunda.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowOfferPopup(false);
+                    localStorage.setItem("managerOfferPopupDate", new Date().toDateString());
+                    navigate("/gerente");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "var(--gold)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    transition: "opacity 0.2s"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.opacity = "0.9"}
+                  onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+                >
+                  Acessar Painel Gerente
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                background: "rgba(246, 196, 83, 0.1)",
+                border: "1px solid var(--gold)",
+                borderRadius: "12px",
+                padding: "16px",
+                marginBottom: "20px"
               }}>
-                Aposte R$ 100,00 e ganhe R$ 30,00 de bônus!
-              </p>
-              <button
-                onClick={() => {
-                  setShowOfferPopup(false);
-                  localStorage.setItem("offerPopupDate", new Date().toDateString());
-                  navigate("/promocoes?tab=recompensas");
-                }}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "var(--gold)",
-                  color: "#000",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  transition: "opacity 0.2s"
-                }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = "0.9"}
-                onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
-              >
-                Ver Ofertas
-              </button>
-            </div>
+                <h3 style={{ 
+                  color: "var(--gold)", 
+                  margin: "0 0 8px 0",
+                  fontSize: "18px"
+                }}>
+                  💰 Baú de 30 reais
+                </h3>
+                <p style={{ 
+                  color: "var(--text-main)", 
+                  margin: "0 0 12px 0",
+                  fontSize: "14px",
+                  lineHeight: "1.5"
+                }}>
+                  Aposte R$ 100,00 e ganhe R$ 30,00 de bônus!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowOfferPopup(false);
+                    localStorage.setItem("offerPopupDate", new Date().toDateString());
+                    navigate("/promocoes?tab=recompensas");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "var(--gold)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    transition: "opacity 0.2s"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.opacity = "0.9"}
+                  onMouseOut={(e) => e.currentTarget.style.opacity = "1"}
+                >
+                  Ver Ofertas
+                </button>
+              </div>
+            )}
 
             <p style={{ 
               color: "var(--text-muted)", 
@@ -427,7 +501,7 @@ export function HomePage() {
 
       {activeBanners.length > 0 ? (
         <section
-          className="banner"
+          className={`banner ${currentBanner?.imageUrl ? "has-image" : ""}`}
           style={{
             cursor: currentBanner?.linkUrl ? "pointer" : "default",
             position: "relative"

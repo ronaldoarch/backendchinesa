@@ -163,10 +163,11 @@ body {
 .banner {
   border-radius: 16px;
   background: var(--bg-banner);
-  padding: 16px;
+  padding: 0;
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(246, 196, 83, 0.4);
+  min-height: 180px;
 }
 
 .banner::after {
@@ -180,11 +181,68 @@ body {
   );
   opacity: 0.6;
   pointer-events: none;
+  z-index: 0;
+}
+
+/* Quando há imagem no banner, não mostrar o gradiente de fundo */
+.banner.has-image::after {
+  display: none;
 }
 
 .banner-content {
   position: relative;
   z-index: 1;
+  padding: 16px;
+}
+
+.banner-image-container {
+  width: 100%;
+  display: block;
+  position: relative;
+  background: var(--bg-banner);
+  aspect-ratio: 16 / 9;
+  /* Fallback para navegadores que não suportam aspect-ratio */
+  padding-bottom: 56.25%; /* 16:9 = 9/16 = 0.5625 */
+  height: 0;
+}
+
+@supports (aspect-ratio: 16 / 9) {
+  .banner-image-container {
+    padding-bottom: 0;
+    height: auto;
+  }
+}
+
+.banner-image-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: var(--bg-banner);
+}
+
+/* Garantir que o banner seja visível no mobile */
+@media (max-width: 768px) {
+  .banner {
+    min-height: 200px;
+  }
+  
+  .banner.has-image {
+    padding: 0;
+  }
+  
+  .banner-image-container {
+    min-height: 200px;
+    width: 100%;
+  }
+  
+  .banner-image-container img {
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .badge-gold {

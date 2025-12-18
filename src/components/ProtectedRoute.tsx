@@ -43,3 +43,20 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
   console.log("ProtectedRoute: Acesso permitido", { requireAdmin, is_admin: user.is_admin, isAdmin });
   return <>{children}</>;
 }
+
+export function ManagerRoute({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const user = getUser();
+  const token = localStorage.getItem("token");
+
+  if (!token || !user) {
+    return <Navigate to="/" replace state={{ from: location }} />;
+  }
+
+  const userType = (user as any).user_type || (user as any).userType;
+  if (userType !== "manager") {
+    return <Navigate to="/" replace state={{ from: location }} />;
+  }
+
+  return <>{children}</>;
+}
