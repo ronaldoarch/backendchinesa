@@ -18,6 +18,8 @@ type Transaction = {
   digitableLine?: string;
   dueDate?: string;
   userId?: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export function DepositPage() {
@@ -30,9 +32,61 @@ export function DepositPage() {
   const [paymentConfirmed, setPaymentConfirmed] = useState<{ show: boolean; amount: number } | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Debug: log quando paymentConfirmed mudar
+  useEffect(() => {
+    if (paymentConfirmed) {
+      console.log("🎨 [DEPOSIT] Estado paymentConfirmed atualizado:", paymentConfirmed);
+    }
+  }, [paymentConfirmed]);
+
   useEffect(() => {
     const savedUser = getUser();
     setUser(savedUser);
+    
+    // Verificar se há transações pendentes que podem ter sido confirmadas
+    // Isso é útil se o usuário recarregou a página ou voltou depois do pagamento
+    async function checkPendingTransactions() {
+      if (!savedUser) return;
+      
+      try {
+        const response = await api.get<Transaction[]>("/payments/transactions");
+        const transactions = response.data;
+        
+        // Buscar a transação mais recente que foi confirmada nos últimos 2 minutos
+        const twoMinutesAgo = Date.now() - 120000;
+        const confirmedTransaction = transactions
+          .filter(t => t.status === "PAID_OUT")
+          .sort((a, b) => {
+            const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            return bTime - aTime; // Mais recente primeiro
+          })
+          .find(t => {
+            const updateTime = new Date(t.updatedAt || t.createdAt || 0).getTime();
+            return updateTime > twoMinutesAgo;
+          });
+        
+        if (confirmedTransaction) {
+          console.log("🎉 [DEPOSIT] Transação confirmada encontrada ao carregar página:", confirmedTransaction);
+          setPaymentConfirmed({ show: true, amount: confirmedTransaction.amount });
+          
+          // Atualizar saldo do usuário
+          try {
+            const userResponse = await api.get("/auth/me");
+            setUser(userResponse.data);
+            if (window.localStorage) {
+              window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+            }
+          } catch (error) {
+            console.error("Erro ao atualizar dados do usuário:", error);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao verificar transações pendentes:", error);
+      }
+    }
+    
+    checkPendingTransactions();
   }, []);
 
   // Polling para verificar status do pagamento
@@ -58,8 +112,21 @@ export function DepositPage() {
         
         if (updatedTransaction.status === "PAID_OUT") {
           console.log("✅ [DEPOSIT] Pagamento confirmado!");
+          console.log("💰 [DEPOSIT] Valor:", updatedTransaction.amount);
+          
+          // Parar polling primeiro
+          clearInterval(interval);
+          setPollingInterval(null);
+          
+          // Atualizar transação
           setTransaction(updatedTransaction);
-          setPaymentConfirmed({ show: true, amount: updatedTransaction.amount });
+          
+          // Mostrar popup
+          console.log("🎉 [DEPOSIT] Mostrando popup de pagamento confirmado");
+          console.log("💰 [DEPOSIT] Valor do pagamento:", updatedTransaction.amount);
+          const paymentData = { show: true, amount: updatedTransaction.amount };
+          console.log("📦 [DEPOSIT] Dados do popup:", paymentData);
+          setPaymentConfirmed(paymentData);
           
           // Atualizar saldo do usuário
           try {
@@ -68,13 +135,10 @@ export function DepositPage() {
             if (window.localStorage) {
               window.localStorage.setItem("user", JSON.stringify(userResponse.data));
             }
+            console.log("✅ [DEPOSIT] Saldo do usuário atualizado");
           } catch (error) {
             console.error("Erro ao atualizar dados do usuário:", error);
           }
-          
-          // Parar polling
-          clearInterval(interval);
-          setPollingInterval(null);
         } else if (updatedTransaction.status === "CANCELED" || updatedTransaction.status === "FAILED") {
           // Parar polling se cancelado ou falhou
           clearInterval(interval);
@@ -459,14 +523,18 @@ export function DepositPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0, 0, 0, 0.8)",
+            background: "rgba(0, 0, 0, 0.9)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 10000,
-            padding: "20px"
+            zIndex: 99999,
+            padding: "20px",
+            pointerEvents: "auto"
           }}
-          onClick={() => setPaymentConfirmed(null)}
+          onClick={() => {
+            console.log("🖱️ [DEPOSIT] Popup clicado, fechando...");
+            setPaymentConfirmed(null);
+          }}
         >
           <div
             style={{
