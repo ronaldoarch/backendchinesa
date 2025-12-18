@@ -212,8 +212,8 @@ function TarefaView() {
 
   async function handleRedeem(taskId: string) {
     if (taskId === "withdraw_account") {
-      // Abrir modal para cadastrar chave PIX
-      setShowPixModal(true);
+      // Direcionar para página de saque para cadastrar chave PIX
+      window.location.href = "/deposito?tab=withdraw&registerPix=true";
       return;
     }
     

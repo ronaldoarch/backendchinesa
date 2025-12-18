@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import { getUser } from "../services/api";
 import { trackFacebookEvent } from "../components/FacebookPixel";
@@ -25,7 +26,11 @@ type Transaction = {
 type TabType = "deposit" | "withdraw";
 
 export function DepositPage() {
-  const [tab, setTab] = useState<TabType>("deposit");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") as TabType | null;
+  const registerPix = searchParams.get("registerPix") === "true";
+  
+  const [tab, setTab] = useState<TabType>(tabFromUrl || "deposit");
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("PIX");
   const [amount, setAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -35,6 +40,8 @@ export function DepositPage() {
   const [paymentConfirmed, setPaymentConfirmed] = useState<{ show: boolean; amount: number } | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pixKey, setPixKey] = useState<string>("");
+  const [showPixRegister, setShowPixRegister] = useState(registerPix);
+  const [savingPixKey, setSavingPixKey] = useState(false);
 
   // Debug: log quando paymentConfirmed mudar
   useEffect(() => {
@@ -43,9 +50,36 @@ export function DepositPage() {
     }
   }, [paymentConfirmed]);
 
+  // Atualizar tab quando a URL mudar
+  useEffect(() => {
+    if (tabFromUrl && (tabFromUrl === "deposit" || tabFromUrl === "withdraw")) {
+      setTab(tabFromUrl);
+    }
+    if (registerPix) {
+      setShowPixRegister(true);
+      setTab("withdraw");
+    }
+  }, [tabFromUrl, registerPix]);
+
   useEffect(() => {
     const savedUser = getUser();
     setUser(savedUser);
+    
+    // Carregar chave PIX do usuário se já tiver cadastrada
+    async function loadUserPixKey() {
+      try {
+        const userResponse = await api.get("/auth/me");
+        if (userResponse.data.pix_key) {
+          setPixKey(userResponse.data.pix_key);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar chave PIX:", error);
+      }
+    }
+    
+    if (savedUser) {
+      loadUserPixKey();
+    }
     
     // Verificar se há transações pendentes que podem ter sido confirmadas
     // Isso é útil se o usuário recarregou a página ou voltou depois do pagamento
@@ -276,6 +310,46 @@ export function DepositPage() {
       setError(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSavePixKey = async () => {
+    if (!pixKey || pixKey.trim() === "") {
+      setError("Por favor, informe a chave PIX");
+      return;
+    }
+
+    setSavingPixKey(true);
+    setError(null);
+
+    try {
+      const response = await api.post("/rewards/redeem", {
+        rewardId: "withdraw_account",
+        pixKey: pixKey.trim()
+      });
+
+      if (response.data.success) {
+        alert("Chave PIX cadastrada com sucesso! Você ganhou R$ 1,00 em bônus!");
+        setShowPixRegister(false);
+        
+        // Atualizar dados do usuário
+        try {
+          const userResponse = await api.get("/auth/me");
+          setUser(userResponse.data);
+          if (window.localStorage) {
+            window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+          }
+        } catch (error) {
+          console.error("Erro ao atualizar dados do usuário:", error);
+        }
+
+        // Remover parâmetro da URL
+        setSearchParams({ tab: "withdraw" });
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Erro ao cadastrar chave PIX");
+    } finally {
+      setSavingPixKey(false);
     }
   };
 
@@ -657,6 +731,93 @@ export function DepositPage() {
           </>
         ) : (
             <>
+              {/* Seção para cadastrar chave PIX (quando vem da página de recompensas) */}
+              {showPixRegister && !user?.pix_key && (
+                <div style={{
+                  padding: "20px",
+                  background: "rgba(246, 196, 83, 0.1)",
+                  border: "2px solid var(--gold)",
+                  borderRadius: "12px",
+                  marginBottom: "20px"
+                }}>
+                  <h3 style={{
+                    margin: "0 0 12px 0",
+                    color: "var(--gold)",
+                    fontSize: "18px",
+                    fontWeight: "600"
+                  }}>
+                    🎁 Cadastre sua chave PIX e ganhe R$ 1,00 de bônus!
+                  </h3>
+                  <p style={{
+                    margin: "0 0 16px 0",
+                    color: "var(--text-muted)",
+                    fontSize: "14px"
+                  }}>
+                    Cadastre sua chave PIX agora e ela ficará salva para seus saques futuros.
+                  </p>
+                  
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{
+                      display: "block",
+                      marginBottom: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "14px",
+                      fontWeight: "600"
+                    }}>
+                      Chave PIX
+                    </label>
+                    <input
+                      type="text"
+                      value={pixKey}
+                      onChange={(e) => setPixKey(e.target.value)}
+                      placeholder="CPF, E-mail, Telefone ou Chave Aleatória"
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        background: "var(--bg-elevated)",
+                        border: "1px solid rgba(246, 196, 83, 0.3)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "14px"
+                      }}
+                    />
+                  </div>
+
+                  {error && (
+                    <div style={{
+                      padding: "12px",
+                      background: "rgba(255, 107, 107, 0.1)",
+                      border: "1px solid #ff6b6b",
+                      borderRadius: "8px",
+                      marginBottom: "16px",
+                      color: "#ff6b6b",
+                      fontSize: "14px"
+                    }}>
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSavePixKey}
+                    disabled={savingPixKey || !pixKey.trim()}
+                    style={{
+                      width: "100%",
+                      padding: "14px",
+                      background: savingPixKey || !pixKey.trim() ? "rgba(246, 196, 83, 0.5)" : "var(--gold)",
+                      color: "#000",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      cursor: savingPixKey || !pixKey.trim() ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {savingPixKey ? "Salvando..." : "Salvar Chave PIX e Ganhar Bônus"}
+                  </button>
+                </div>
+              )}
+
               {/* Formulário de Saque */}
               <div style={{
                 padding: "16px",
@@ -683,6 +844,16 @@ export function DepositPage() {
                     Bônus: R$ {user.bonus_balance.toFixed(2).replace(".", ",")} (não pode ser sacado)
                   </p>
                 )}
+                {user?.pix_key && (
+                  <p style={{
+                    margin: "12px 0 0 0",
+                    color: "#4ade80",
+                    fontSize: "12px",
+                    fontWeight: "600"
+                  }}>
+                    ✓ Chave PIX cadastrada: {user.pix_key}
+                  </p>
+                )}
               </div>
 
               <form onSubmit={handleWithdraw}>
@@ -694,13 +865,13 @@ export function DepositPage() {
                     fontSize: "14px",
                     fontWeight: "600"
                   }}>
-                    Chave PIX
+                    Chave PIX {user?.pix_key && "(já cadastrada)"}
                   </label>
                   <input
                     type="text"
                     value={pixKey}
                     onChange={(e) => setPixKey(e.target.value)}
-                    placeholder="CPF, E-mail, Telefone ou Chave Aleatória"
+                    placeholder={user?.pix_key || "CPF, E-mail, Telefone ou Chave Aleatória"}
                     style={{
                       width: "100%",
                       padding: "12px",
@@ -717,7 +888,10 @@ export function DepositPage() {
                     color: "var(--text-muted)",
                     fontSize: "12px"
                   }}>
-                    Informe a chave PIX para onde deseja receber o saque
+                    {user?.pix_key 
+                      ? "Sua chave PIX já está cadastrada. Você pode alterá-la se desejar."
+                      : "Informe a chave PIX para onde deseja receber o saque"
+                    }
                   </p>
                 </div>
 
