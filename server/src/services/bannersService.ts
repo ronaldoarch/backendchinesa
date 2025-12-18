@@ -4,12 +4,14 @@ export type Banner = {
   id: number;
   title: string | null;
   imageUrl: string | null;
+  linkUrl: string | null;
+  position: number;
   active: boolean;
 };
 
 export async function listBanners(): Promise<Banner[]> {
   const [rows] = await pool.query(
-    "SELECT id, title, image_url as imageUrl, active FROM banners ORDER BY id DESC"
+    "SELECT id, title, image_url as imageUrl, link_url as linkUrl, position, active FROM banners ORDER BY position ASC, id DESC"
   );
   return rows as Banner[];
 }
@@ -17,14 +19,16 @@ export async function listBanners(): Promise<Banner[]> {
 export async function createBanner(data: {
   title?: string | null;
   imageUrl?: string | null;
+  linkUrl?: string | null;
+  position?: number;
   active: boolean;
 }): Promise<Banner> {
   const [result] = await pool.query(
-    "INSERT INTO banners (title, image_url, active) VALUES (?, ?, ?)",
-    [data.title ?? null, data.imageUrl ?? null, data.active]
+    "INSERT INTO banners (title, image_url, link_url, position, active) VALUES (?, ?, ?, ?, ?)",
+    [data.title ?? null, data.imageUrl ?? null, data.linkUrl ?? null, data.position ?? 0, data.active]
   );
   const [rows] = await pool.query(
-    "SELECT id, title, image_url as imageUrl, active FROM banners WHERE id = ?",
+    "SELECT id, title, image_url as imageUrl, link_url as linkUrl, position, active FROM banners WHERE id = ?",
     [(result as any).insertId]
   );
   return (rows as Banner[])[0];
@@ -32,7 +36,7 @@ export async function createBanner(data: {
 
 export async function updateBanner(
   id: number,
-  data: Partial<{ title: string | null; imageUrl: string | null; active: boolean }>
+  data: Partial<{ title: string | null; imageUrl: string | null; linkUrl: string | null; position: number; active: boolean }>
 ): Promise<Banner | null> {
   const fields: string[] = [];
   const values: unknown[] = [];
@@ -44,6 +48,14 @@ export async function updateBanner(
   if (data.imageUrl !== undefined) {
     fields.push("image_url = ?");
     values.push(data.imageUrl);
+  }
+  if (data.linkUrl !== undefined) {
+    fields.push("link_url = ?");
+    values.push(data.linkUrl);
+  }
+  if (data.position !== undefined) {
+    fields.push("position = ?");
+    values.push(data.position);
   }
   if (data.active !== undefined) {
     fields.push("active = ?");
@@ -59,7 +71,7 @@ export async function updateBanner(
   if ((result as any).affectedRows === 0) return null;
 
   const [rows] = await pool.query(
-    "SELECT id, title, image_url as imageUrl, active FROM banners WHERE id = ?",
+    "SELECT id, title, image_url as imageUrl, link_url as linkUrl, position, active FROM banners WHERE id = ?",
     [id]
   );
   return (rows as Banner[])[0];

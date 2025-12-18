@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../services/api";
+import { api, getImageUrl } from "../services/api";
 
 type Props = {
   className?: string;
@@ -21,11 +21,6 @@ export function LoadingBanner({ className, style }: Props) {
     })();
   }, []);
 
-  const getImageUrl = (url: string) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${api.defaults.baseURL?.replace("/api", "")}${url}`;
-  };
 
   if (!bannerUrl) {
     return null;

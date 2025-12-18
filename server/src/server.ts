@@ -39,19 +39,12 @@ app.use((_req, res, next) => {
 app.use(json());
 
 // Middleware de logging global ANTES de tudo - PRIMEIRO MIDDLEWARE
+// Apenas logar em modo desenvolvimento
+const isDebug = process.env.NODE_ENV === "development" || process.env.DEBUG === "true";
 app.use((req, res, next) => {
-  console.log("=".repeat(60));
-  console.log(`🌐 [GLOBAL] NOVA REQUISIÇÃO RECEBIDA`);
-  console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
-  console.log(`🌐 [GLOBAL] Headers:`, {
-    authorization: req.headers.authorization ? "presente" : "ausente",
-    "content-type": req.headers["content-type"],
-    host: req.headers.host
-  });
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log(`🌐 [GLOBAL] Body:`, JSON.stringify(req.body, null, 2));
+  if (isDebug) {
+    console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
   }
-  console.log("=".repeat(60));
   next();
 });
 
@@ -128,51 +121,22 @@ try {
   console.warn("⚠️ Aviso: Não foi possível configurar diretório de uploads:", error);
 }
 
-// Log antes de montar as rotas
-console.log("🔧 [SERVER] Montando apiRouter em /api");
-console.log("🔧 [SERVER] Rotas disponíveis no apiRouter:", [
-  "/health",
-  "/auth",
-  "/providers",
-  "/games",
-  "/banners",
-  "/promotions",
-  "/settings",
-  "/payments",
-  "/stats",
-  "/tracking",
-  "/bonuses",
-  "/uploads",
-  "/playfivers"
-]);
-
-// Log ANTES de montar o apiRouter
-console.log("🔧 [SERVER] ANTES de montar apiRouter em /api");
-console.log("🔧 [SERVER] apiRouter definido?", !!apiRouter);
-console.log("🔧 [SERVER] apiRouter.stack length:", apiRouter.stack?.length || 0);
-
-// Listar todas as rotas registradas no apiRouter
-if (apiRouter.stack) {
-  console.log("🔧 [SERVER] Rotas no apiRouter.stack:");
-  apiRouter.stack.forEach((layer: any, index: number) => {
-    if (layer.route) {
-      console.log(`  ${index}: ${Object.keys(layer.route.methods).join(', ').toUpperCase()} ${layer.route.path}`);
-    } else if (layer.name === 'router') {
-      console.log(`  ${index}: Router montado em ${layer.regexp}`);
-    }
-  });
+// Log antes de montar as rotas (apenas em debug)
+if (isDebug) {
+  console.log("🔧 [SERVER] Montando apiRouter em /api");
+  console.log("🔧 [SERVER] Rotas disponíveis:", [
+    "/health", "/auth", "/providers", "/games", "/banners",
+    "/promotions", "/settings", "/payments", "/stats",
+    "/tracking", "/bonuses", "/uploads", "/playfivers"
+  ]);
 }
 
 // Middleware que captura TODAS as requisições que começam com /api
+// Logs apenas em modo debug
 app.use("/api", (req, res, next) => {
-  console.log("🚨 [API MIDDLEWARE] ========================================");
-  console.log("🚨 [API MIDDLEWARE] Requisição chegou em /api");
-  console.log("🚨 [API MIDDLEWARE] Method:", req.method);
-  console.log("🚨 [API MIDDLEWARE] Path:", req.path);
-  console.log("🚨 [API MIDDLEWARE] URL:", req.url);
-  console.log("🚨 [API MIDDLEWARE] Original URL:", req.originalUrl);
-  console.log("🚨 [API MIDDLEWARE] Base URL:", req.baseUrl);
-  console.log("🚨 [API MIDDLEWARE] ========================================");
+  if (isDebug) {
+    console.log(`🚨 [API] ${req.method} ${req.path}`);
+  }
   next();
 });
 

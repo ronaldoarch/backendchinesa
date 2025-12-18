@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { GameCard } from "../components/GameCard";
-import { api, getUser } from "../services/api";
+import { api, getUser, getImageUrl } from "../services/api";
 
 type Game = {
   id: number;
@@ -23,6 +23,12 @@ type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip";
 
 function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: string; bannerId: number }) {
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Log para debug
+  useEffect(() => {
+    console.log("🖼️ BannerImage renderizado:", { imageUrl, title, bannerId, imageError });
+  }, [imageUrl, title, bannerId, imageError]);
 
   if (imageError || !imageUrl) {
     return (
@@ -34,33 +40,54 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
   }
 
   return (
-    <div
+    <div 
       className="banner-image-container"
       style={{
         position: "relative",
         width: "100%",
-        borderRadius: "16px",
-        overflow: "hidden",
-        display: "block",
-        aspectRatio: "16 / 9"
+        minHeight: "200px"
       }}
     >
+      {!imageLoaded && (
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "var(--bg-banner)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
+          minHeight: "200px"
+        }}>
+          <span style={{ color: "var(--gold)", fontSize: "14px" }}>Carregando...</span>
+        </div>
+      )}
       <img
         src={imageUrl || ""}
         alt={title || "Banner"}
+        className="banner-image"
         style={{
+          opacity: imageLoaded ? 1 : 0,
+          transition: "opacity 0.3s ease",
+          position: "absolute",
+          top: 0,
+          left: 0,
           width: "100%",
           height: "100%",
+          objectFit: "cover",
           display: "block",
-          objectFit: "cover"
+          minHeight: "200px"
         }}
         onError={(e) => {
-          // Silenciar erro 404 - arquivo não existe, mas já temos fallback
-          // Apenas logar em modo debug se necessário
-          if (process.env.NODE_ENV === "development") {
-            console.warn("⚠️ Imagem do banner não encontrada (404 esperado):", imageUrl);
-          }
+          console.error("❌ Erro ao carregar imagem do banner:", imageUrl, e);
           setImageError(true);
+        }}
+        onLoad={(e) => {
+          console.log("✅ Imagem do banner carregada com sucesso:", imageUrl);
+          setImageLoaded(true);
         }}
       />
       {title && (
@@ -175,13 +202,8 @@ export function HomePage() {
         const settingsData = settingsRes.data || {};
         setSettings(settingsData);
         if (settingsData["offerPopup.imageUrl"]) {
-          const imageUrl = settingsData["offerPopup.imageUrl"];
-          if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-            setOfferPopupImage(imageUrl);
-          } else {
-            const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
-            setOfferPopupImage(`${baseUrl}${imageUrl}`);
-          }
+          const imageUrl = getImageUrl(settingsData["offerPopup.imageUrl"]);
+          setOfferPopupImage(imageUrl || null);
         }
         console.log("✅ Dados carregados:", {
           games: gamesRes.data?.length || 0,
@@ -271,12 +293,6 @@ export function HomePage() {
     return filtered;
   }, [games, activeFilter, favorites, providers]);
 
-  const getImageUrl = (url: string) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
-    return `${baseUrl}${url}`;
-  };
 
   const activeBanners = banners.filter((b) => b.active).sort((a, b) => a.position - b.position);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);

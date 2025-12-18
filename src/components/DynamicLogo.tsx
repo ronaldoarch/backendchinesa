@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../services/api";
+import { api, getImageUrl } from "../services/api";
 
 type Props = {
   fallback?: React.ReactNode;
@@ -25,11 +25,6 @@ export function DynamicLogo({ fallback, className, style }: Props) {
     })();
   }, []);
 
-  const getImageUrl = (url: string) => {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${api.defaults.baseURL?.replace("/api", "")}${url}`;
-  };
 
   if (loading) {
     return fallback ? <>{fallback}</> : null;

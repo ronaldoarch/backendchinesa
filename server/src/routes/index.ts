@@ -22,14 +22,12 @@ export const apiRouter = Router();
 console.log("🚀 [ROUTES] apiRouter criado e rotas sendo registradas...");
 
 // Middleware de logging para todas as rotas da API
+// Logs apenas em modo debug
+const isDebug = process.env.NODE_ENV === "development" || process.env.DEBUG === "true";
 apiRouter.use((req, res, next) => {
-  console.log("=".repeat(50));
-  console.log(`🔵 [API ROUTER] ${req.method} ${req.path}`);
-  console.log(`🔵 [API ROUTER] URL completa: ${req.url}`);
-  console.log(`🔵 [API ROUTER] Original URL: ${req.originalUrl}`);
-  console.log(`🔵 [API ROUTER] Base URL: ${req.baseUrl}`);
-  console.log(`🔵 [API ROUTER] Route: ${req.route?.path || 'N/A'}`);
-  console.log("=".repeat(50));
+  if (isDebug) {
+    console.log(`🔵 [API ROUTER] ${req.method} ${req.path}`);
+  }
   next();
 });
 

@@ -91,3 +91,22 @@ export function getUser(): any | null {
   return userStr ? JSON.parse(userStr) : null;
 }
 
+// Função utilitária para construir URLs de imagens
+// IMPORTANTE: Como o proxy do .htaccess não está funcionando no Hostinger,
+// sempre usar a URL direta do backend para imagens
+export function getImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  
+  // Se já é uma URL completa (http/https), retornar diretamente
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+  
+  // Para URLs relativas (começando com /), usar a URL do backend diretamente
+  // O proxy pode não estar funcionando, então sempre usar o backend
+  const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
+  const fullUrl = `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+  
+  return fullUrl;
+}
+

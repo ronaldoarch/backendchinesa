@@ -10,23 +10,41 @@ import {
 const bannerSchema = z.object({
   title: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
+  linkUrl: z.string().nullable().optional(),
+  position: z.number().int().nonnegative().optional(),
   active: z.boolean().default(true)
 });
 
 export async function listBannersController(_req: Request, res: Response): Promise<void> {
-  const banners = await listBanners();
-  res.json(banners);
+  try {
+    const banners = await listBanners();
+    res.json(banners);
+  } catch (error: any) {
+    console.error("❌ [BANNERS] Erro ao listar banners:", error);
+    res.status(500).json({ 
+      message: "Erro ao carregar banners",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
 }
 
 export async function createBannerController(req: Request, res: Response): Promise<void> {
-  const parsed = bannerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json(parsed.error.flatten());
-    return;
-  }
+  try {
+    const parsed = bannerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json(parsed.error.flatten());
+      return;
+    }
 
-  const banner = await createBanner(parsed.data);
-  res.status(201).json(banner);
+    const banner = await createBanner(parsed.data);
+    res.status(201).json(banner);
+  } catch (error: any) {
+    console.error("❌ [BANNERS] Erro ao criar banner:", error);
+    res.status(500).json({ 
+      message: "Erro ao criar banner",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
 }
 
 export async function updateBannerController(req: Request, res: Response): Promise<void> {
@@ -59,19 +77,27 @@ export async function updateBannerController(req: Request, res: Response): Promi
 }
 
 export async function deleteBannerController(req: Request, res: Response): Promise<void> {
-  const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    res.status(400).json({ message: "ID inválido" });
-    return;
-  }
+  try {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      res.status(400).json({ message: "ID inválido" });
+      return;
+    }
 
-  const deleted = await deleteBanner(id);
-  if (!deleted) {
-    res.status(404).json({ message: "Banner não encontrado" });
-    return;
-  }
+    const deleted = await deleteBanner(id);
+    if (!deleted) {
+      res.status(404).json({ message: "Banner não encontrado" });
+      return;
+    }
 
-  res.status(204).send();
+    res.status(204).send();
+  } catch (error: any) {
+    console.error("❌ [BANNERS] Erro ao deletar banner:", error);
+    res.status(500).json({ 
+      message: "Erro ao deletar banner",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
 }
 
 
