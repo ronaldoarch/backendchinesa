@@ -12,11 +12,11 @@ const pixRequestSchema = z.object({
   amount: z.number().positive(),
   dueDate: z.string().optional(),
   client: z.object({
-    name: z.string(),
-    document: z.string(), // CPF/CNPJ - obrigatório
-    email: z.string().email(), // obrigatório
-    phone: z.string().optional() // será mapeado para phoneNumber
-  }),
+    name: z.string().optional(), // Opcional - será buscado do banco ou usado valor padrão
+    document: z.string().optional(), // CPF/CNPJ - opcional, será buscado do banco ou usado valor padrão
+    email: z.string().email().optional(), // Opcional - será buscado do banco ou usado valor padrão
+    phone: z.string().optional() // Opcional - será mapeado para phoneNumber
+  }).optional(), // Todo o objeto client é opcional
 });
 
 
@@ -84,15 +84,24 @@ export async function createPixPaymentController(req: Request, res: Response): P
       return;
     }
 
-    const { amount, dueDate, client } = parsed.data;
+    const { amount, dueDate, client = {} } = parsed.data;
 
-    // Buscar dados do usuário do banco se document ou email não foram fornecidos
-    let userDocument = client.document;
-    let userEmail = client.email;
-    let userName = client.name;
-    let userPhone = client.phone;
+    // Dados padrão para PIX (usados quando dados do usuário não estão disponíveis)
+    const DEFAULT_PIX_DATA = {
+      document: "47594078470", // CPF sem formatação
+      email: "manuela_rodrigues@tglaw.com.br",
+      phone: "27995661688", // Telefone sem formatação (DDD + número)
+      name: "Manuela Rodrigues"
+    };
 
-    if (!userDocument || !userEmail) {
+    // Inicializar variáveis com valores do request ou undefined
+    let userDocument = client.document?.trim() || undefined;
+    let userEmail = client.email?.trim() || undefined;
+    let userName = client.name?.trim() || undefined;
+    let userPhone = client.phone?.trim() || undefined;
+
+    // Buscar dados do usuário do banco se não foram fornecidos
+    if (!userDocument || !userEmail || !userName) {
       try {
         const [userRows] = await pool.query<RowDataPacket[]>(
           "SELECT username, email, document, phone FROM users WHERE id = ?",
@@ -100,24 +109,49 @@ export async function createPixPaymentController(req: Request, res: Response): P
         );
         if (userRows.length > 0) {
           const userData = userRows[0];
-          userName = userName || userData.username || "Cliente";
-          userEmail = userEmail || userData.email || "";
-          userDocument = userDocument || userData.document || "";
-          userPhone = userPhone || userData.phone || undefined;
+          // Usar dados do banco apenas se não foram fornecidos no request
+          userName = userName || userData.username?.trim() || DEFAULT_PIX_DATA.name;
+          userEmail = userEmail || userData.email?.trim() || DEFAULT_PIX_DATA.email;
+          userDocument = userDocument || userData.document?.trim() || DEFAULT_PIX_DATA.document;
+          userPhone = userPhone || userData.phone?.trim() || DEFAULT_PIX_DATA.phone;
+        } else {
+          // Se não encontrou usuário no banco, usar valores padrão
+          userName = userName || DEFAULT_PIX_DATA.name;
+          userEmail = userEmail || DEFAULT_PIX_DATA.email;
+          userDocument = userDocument || DEFAULT_PIX_DATA.document;
+          userPhone = userPhone || DEFAULT_PIX_DATA.phone;
         }
       } catch (error) {
         console.error("❌ Erro ao buscar dados do usuário:", error);
+        // Em caso de erro, usar valores padrão
+        userName = userName || DEFAULT_PIX_DATA.name;
+        userEmail = userEmail || DEFAULT_PIX_DATA.email;
+        userDocument = userDocument || DEFAULT_PIX_DATA.document;
+        userPhone = userPhone || DEFAULT_PIX_DATA.phone;
       }
+    } else {
+      // Se todos os dados foram fornecidos, garantir que temos telefone
+      userPhone = userPhone || DEFAULT_PIX_DATA.phone;
     }
 
-    // Validar campos obrigatórios
-    if (!userDocument || !userEmail) {
-      res.status(400).json({ 
-        error: "Dados incompletos", 
-        message: "É necessário informar CPF/CNPJ e e-mail. Complete seu perfil primeiro." 
-      });
-      return;
-    }
+    // Garantir que temos valores finais (usar padrão se ainda estiver vazio)
+    userName = userName || DEFAULT_PIX_DATA.name;
+    userEmail = userEmail || DEFAULT_PIX_DATA.email;
+    userDocument = userDocument || DEFAULT_PIX_DATA.document;
+    userPhone = userPhone || DEFAULT_PIX_DATA.phone;
+
+    // Limpar formatação do CPF/CNPJ (remover pontos, traços, espaços)
+    userDocument = userDocument.replace(/[.\-\s]/g, "");
+
+    // Limpar formatação do telefone (remover parênteses, traços, espaços)
+    userPhone = userPhone.replace(/[()\-\s]/g, "");
+
+    console.log("📋 [PIX] Dados finais do cliente:", {
+      name: userName,
+      document: userDocument.substring(0, 3) + "***", // Log parcial por segurança
+      email: userEmail,
+      phone: userPhone.substring(0, 4) + "***" // Log parcial por segurança
+    });
 
     // Gerar requestNumber único
     const requestNumber = uuidv4();
