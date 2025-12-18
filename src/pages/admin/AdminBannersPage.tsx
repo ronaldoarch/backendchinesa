@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../../services/api";
 
 type Banner = {
@@ -20,6 +20,7 @@ export function AdminBannersPage() {
     active: true
   });
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void (async () => {
@@ -54,15 +55,33 @@ export function AdminBannersPage() {
     }
   }
 
-  async function handleFileUpload(file: File | undefined) {
-    if (!file) return;
+  async function handleFileUpload(file: File) {
+    if (!file) {
+      console.warn("⚠️ Nenhum arquivo selecionado");
+      return;
+    }
+    
+    // Validar tipo de arquivo
+    if (!file.type.startsWith("image/")) {
+      alert("Por favor, selecione apenas arquivos de imagem.");
+      return;
+    }
+    
+    // Validar tamanho (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Arquivo muito grande. Tamanho máximo: 10MB");
+      return;
+    }
+    
     setUploading(true);
     try {
       const url = await uploadFile(file);
       setBannerForm((b) => ({ ...b, imageUrl: url }));
-    } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-      alert("Erro ao fazer upload do arquivo.");
+      alert("✅ Imagem enviada com sucesso!");
+    } catch (error: any) {
+      console.error("❌ Erro ao fazer upload:", error);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Erro desconhecido";
+      alert(`❌ Erro ao fazer upload: ${errorMsg}`);
     } finally {
       setUploading(false);
     }
@@ -105,20 +124,6 @@ export function AdminBannersPage() {
     } catch (error) {
       console.error("Erro ao remover banner:", error);
       alert("Erro ao remover banner.");
-    }
-  }
-
-  async function handleFileUpload(file: File | undefined) {
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadFile(file);
-      setBannerForm((b) => ({ ...b, imageUrl: url }));
-    } catch (error) {
-      console.error("Erro ao fazer upload:", error);
-      alert("Erro ao fazer upload do arquivo.");
-    } finally {
-      setUploading(false);
     }
   }
 
@@ -172,15 +177,54 @@ export function AdminBannersPage() {
                 style={{ marginBottom: "8px" }}
                 required
         />
-              <label className="admin-file-upload">
-        <input
-          type="file"
-          accept="image/*"
-                  onChange={(e) => handleFileUpload(e.target.files?.[0])}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    console.log("🔄 onChange disparado, arquivo:", file ? `${file.name} (${file.size} bytes)` : "nenhum");
+                    if (file) {
+                      console.log("📎 Arquivo selecionado:", file.name, file.size, file.type);
+                      handleFileUpload(file);
+                    } else {
+                      console.warn("⚠️ Nenhum arquivo selecionado no onChange");
+                    }
+                    // Limpar o input para permitir selecionar o mesmo arquivo novamente
+                    if (e.target) {
+                      e.target.value = "";
+                    }
+                  }}
                   disabled={uploading}
+                  style={{ display: "none" }}
+                  id="banner-file-input"
                 />
-                {uploading ? "Enviando..." : "Fazer upload da imagem"}
-              </label>
+                <label 
+                  htmlFor="banner-file-input"
+                  className="admin-file-upload" 
+                  style={{ 
+                    cursor: uploading ? "not-allowed" : "pointer",
+                    pointerEvents: uploading ? "none" : "auto",
+                    display: "inline-block",
+                    textAlign: "center"
+                  }}
+                  onClick={(e) => {
+                    if (uploading) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    // Garantir que o input seja clicado
+                    if (fileInputRef.current && !uploading) {
+                      console.log("🖱️ Label clicado, disparando clique no input");
+                      fileInputRef.current.click();
+                    }
+                  }}
+                >
+                  {uploading ? "⏳ Enviando..." : "📤 Fazer upload da imagem"}
+                </label>
+              </div>
             </div>
             {bannerForm.imageUrl && (
               <div

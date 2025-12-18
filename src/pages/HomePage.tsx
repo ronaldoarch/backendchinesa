@@ -19,18 +19,15 @@ type Provider = {
   active: boolean;
 };
 
-type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip";
+type FilterType = "popular" | "slots" | "recente" | "favoritos" | "vip" | "pgsoft";
 
 function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: string; bannerId: number }) {
   const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Log para debug
-  useEffect(() => {
-    console.log("🖼️ BannerImage renderizado:", { imageUrl, title, bannerId, imageError });
-  }, [imageUrl, title, bannerId, imageError]);
+  // Garantir que imageUrl seja uma string válida e não vazia
+  const validImageUrl = imageUrl && imageUrl.trim() !== "" ? imageUrl : null;
 
-  if (imageError || !imageUrl) {
+  if (imageError || !validImageUrl) {
     return (
       <div className="banner-content">
         <span className="badge-gold">Promoção</span>
@@ -40,55 +37,34 @@ function BannerImage({ imageUrl, title, bannerId }: { imageUrl: string; title?: 
   }
 
   return (
-    <div 
-      className="banner-image-container"
-      style={{
-        position: "relative",
-        width: "100%",
-        minHeight: "200px"
-      }}
-    >
-      {!imageLoaded && (
+    <div className="banner-image-container">
+      {/* Elemento de debug visível apenas em desenvolvimento */}
+      {process.env.NODE_ENV === "development" && (
         <div style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background: "var(--bg-banner)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1,
-          minHeight: "200px"
+          top: "4px",
+          left: "4px",
+          background: "rgba(0,0,0,0.7)",
+          color: "#fff",
+          padding: "4px 8px",
+          fontSize: "10px",
+          zIndex: 100,
+          borderRadius: "4px",
+          maxWidth: "90%",
+          wordBreak: "break-all"
         }}>
-          <span style={{ color: "var(--gold)", fontSize: "14px" }}>Carregando...</span>
+          URL: {validImageUrl.substring(0, 60)}...
         </div>
       )}
       <img
-        src={imageUrl || ""}
+        src={validImageUrl}
         alt={title || "Banner"}
         className="banner-image"
-        style={{
-          opacity: imageLoaded ? 1 : 0,
-          transition: "opacity 0.3s ease",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-          minHeight: "200px"
-        }}
+        data-banner-id={bannerId}
         onError={(e) => {
-          console.error("❌ Erro ao carregar imagem do banner:", imageUrl, e);
           setImageError(true);
         }}
-        onLoad={(e) => {
-          console.log("✅ Imagem do banner carregada com sucesso:", imageUrl);
-          setImageLoaded(true);
-        }}
+        loading="eager"
       />
       {title && (
         <div
@@ -232,14 +208,50 @@ export function HomePage() {
     return providers.find((p) => p.id === providerId)?.name || "Provedor";
   };
 
+  // Verificar se o jogo é do PG SOFT
+  const isPGSoft = (game: Game) => {
+    const providerName = getProviderName(game.providerId).toLowerCase();
+    return (
+      providerName.includes("pg soft") || 
+      providerName.includes("pgsoft") ||
+      providerName.includes("oficial - pg soft") ||
+      providerName.includes("oficial-pg soft")
+    );
+  };
+
+  // Função auxiliar para ordenar jogos (PG SOFT primeiro)
+  const sortGamesWithPGSoftFirst = (games: Game[]) => {
+    return [...games].sort((a, b) => {
+      const aIsPGSoft = isPGSoft(a);
+      const bIsPGSoft = isPGSoft(b);
+      
+      // Se um é PG SOFT e o outro não, PG SOFT vem primeiro
+      if (aIsPGSoft && !bIsPGSoft) return -1;
+      if (!aIsPGSoft && bIsPGSoft) return 1;
+      
+      // Se ambos são PG SOFT ou ambos não são, manter ordem original
+      return 0;
+    });
+  };
+
   // Filtrar e ordenar jogos baseado no filtro ativo
   const filteredGames = useMemo(() => {
     let filtered = [...games];
 
     switch (activeFilter) {
       case "popular":
-        // Popular: ordenar por ID (mais recentes primeiro, assumindo que IDs maiores = mais recentes)
-        filtered = filtered.sort((a, b) => b.id - a.id);
+        // Popular: ordenar por ID (mais recentes primeiro), mas PG SOFT primeiro
+        filtered = filtered.sort((a, b) => {
+          const aIsPGSoft = isPGSoft(a);
+          const bIsPGSoft = isPGSoft(b);
+          
+          // PG SOFT primeiro
+          if (aIsPGSoft && !bIsPGSoft) return -1;
+          if (!aIsPGSoft && bIsPGSoft) return 1;
+          
+          // Depois ordenar por ID (mais recentes primeiro)
+          return b.id - a.id;
+        });
         break;
 
       case "slots":
@@ -254,20 +266,53 @@ export function HomePage() {
             slotProviders.some((provider) => providerName.includes(provider))
           );
         });
-        // Ordenar por nome
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        // Ordenar: PG SOFT primeiro, depois por nome
+        filtered.sort((a, b) => {
+          const aIsPGSoft = isPGSoft(a);
+          const bIsPGSoft = isPGSoft(b);
+          
+          if (aIsPGSoft && !bIsPGSoft) return -1;
+          if (!aIsPGSoft && bIsPGSoft) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
+        break;
+
+      case "pgsoft":
+        // PG SOFT: apenas jogos do PG SOFT
+        filtered = filtered.filter((game) => isPGSoft(game));
+        // Ordenar por ID (mais recentes primeiro)
+        filtered.sort((a, b) => b.id - a.id);
         break;
 
       case "recente":
-        // Recente: ordenar por ID DESC (mais recentes primeiro)
-        filtered = filtered.sort((a, b) => b.id - a.id);
+        // Recente: ordenar por ID DESC (mais recentes primeiro), mas PG SOFT primeiro
+        filtered = filtered.sort((a, b) => {
+          const aIsPGSoft = isPGSoft(a);
+          const bIsPGSoft = isPGSoft(b);
+          
+          // PG SOFT primeiro
+          if (aIsPGSoft && !bIsPGSoft) return -1;
+          if (!aIsPGSoft && bIsPGSoft) return 1;
+          
+          // Depois ordenar por ID (mais recentes primeiro)
+          return b.id - a.id;
+        });
         break;
 
       case "favoritos":
         // Favoritos: apenas jogos marcados como favoritos
         filtered = filtered.filter((game) => favorites.has(game.id));
-        // Ordenar por nome
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        // Ordenar: PG SOFT primeiro, depois por nome
+        filtered.sort((a, b) => {
+          const aIsPGSoft = isPGSoft(a);
+          const bIsPGSoft = isPGSoft(b);
+          
+          if (aIsPGSoft && !bIsPGSoft) return -1;
+          if (!aIsPGSoft && bIsPGSoft) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
         break;
 
       case "vip":
@@ -282,11 +327,21 @@ export function HomePage() {
             vipKeywords.some((keyword) => gameName.includes(keyword))
           );
         });
-        // Ordenar por nome
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        // Ordenar: PG SOFT primeiro, depois por nome
+        filtered.sort((a, b) => {
+          const aIsPGSoft = isPGSoft(a);
+          const bIsPGSoft = isPGSoft(b);
+          
+          if (aIsPGSoft && !bIsPGSoft) return -1;
+          if (!aIsPGSoft && bIsPGSoft) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
         break;
 
       default:
+        // Para qualquer outro filtro, também priorizar PG SOFT
+        filtered = sortGamesWithPGSoftFirst(filtered);
         break;
     }
 
@@ -534,7 +589,7 @@ export function HomePage() {
         >
           {currentBanner?.imageUrl ? (
             <BannerImage
-              imageUrl={getImageUrl(currentBanner.imageUrl || "") || ""}
+              imageUrl={getImageUrl(currentBanner.imageUrl) || ""}
               title={currentBanner.title}
               bannerId={currentBanner.id}
             />
@@ -676,6 +731,12 @@ export function HomePage() {
           Slots
         </button>
         <button
+          className={`tab ${activeFilter === "pgsoft" ? "tab-active" : ""}`}
+          onClick={() => setActiveFilter("pgsoft")}
+        >
+          PG SOFT
+        </button>
+        <button
           className={`tab ${activeFilter === "recente" ? "tab-active" : ""}`}
           onClick={() => setActiveFilter("recente")}
         >
@@ -732,6 +793,8 @@ export function HomePage() {
               ? "Nenhum jogo favorito. Clique no coração nos jogos para adicionar aos favoritos."
               : activeFilter === "slots"
               ? "Nenhum jogo de slots encontrado."
+              : activeFilter === "pgsoft"
+              ? "Nenhum jogo PG SOFT encontrado."
               : activeFilter === "vip"
               ? "Nenhum jogo VIP encontrado."
               : "Nenhum jogo cadastrado. Adicione jogos no painel admin."}

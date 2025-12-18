@@ -95,17 +95,36 @@ export function getUser(): any | null {
 // IMPORTANTE: Como o proxy do .htaccess não está funcionando no Hostinger,
 // sempre usar a URL direta do backend para imagens
 export function getImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
+  if (!url || url.trim() === "") return null;
   
-  // Se já é uma URL completa (http/https), retornar diretamente
+  // URL do backend (sem /api)
+  const backendBaseUrl = "https://g40okoockcoskwwwgc4sowso.agenciamidas.com";
+  
+  // Se já é uma URL completa (http/https)
   if (url.startsWith("http://") || url.startsWith("https://")) {
+    // Se for do domínio h2jogos.site ou localhost, converter para o backend
+    if (url.includes("h2jogos.site") || url.includes("localhost")) {
+      // Extrair o caminho da URL (ex: /uploads/banner.png)
+      try {
+        const urlObj = new URL(url);
+        const path = urlObj.pathname;
+        return `${backendBaseUrl}${path}`;
+      } catch {
+        // Se falhar ao fazer parse, tentar extrair manualmente
+        const pathMatch = url.match(/\/(uploads\/.+)$/);
+        if (pathMatch) {
+          return `${backendBaseUrl}${pathMatch[1]}`;
+        }
+      }
+    }
+    // Se for de outro domínio válido, retornar como está
     return url;
   }
   
   // Para URLs relativas (começando com /), usar a URL do backend diretamente
   // O proxy pode não estar funcionando, então sempre usar o backend
-  const baseUrl = api.defaults.baseURL?.replace("/api", "") || "";
-  const fullUrl = `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
+  const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+  const fullUrl = `${backendBaseUrl}${cleanUrl}`;
   
   return fullUrl;
 }

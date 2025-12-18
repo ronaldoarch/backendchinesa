@@ -5,7 +5,16 @@ export default defineConfig({
   plugins: [react()],
   root: ".",
   build: {
-    outDir: "dist-client"
+    outDir: "dist-client",
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
+  },
+  optimizeDeps: {
+    include: ["axios"],
+    esbuildOptions: {
+      target: "es2020"
+    }
   },
   server: {
     port: 5173,
