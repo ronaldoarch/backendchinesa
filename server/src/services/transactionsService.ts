@@ -70,12 +70,43 @@ export async function createTransaction(data: {
 
 export async function findTransactionByRequestNumber(requestNumber: string): Promise<Transaction | null> {
   const [rows] = await pool.query(
-    `SELECT * FROM transactions WHERE request_number = ?`,
+    `SELECT 
+      id, 
+      user_id as userId,
+      request_number as requestNumber,
+      transaction_id as transactionId,
+      payment_method as paymentMethod,
+      amount,
+      status,
+      qr_code as qrCode,
+      qr_code_base64 as qrCodeBase64,
+      barcode,
+      digitable_line as digitableLine,
+      due_date as dueDate,
+      callback_url as callbackUrl,
+      metadata,
+      created_at as createdAt,
+      updated_at as updatedAt
+    FROM transactions WHERE request_number = ?`,
     [requestNumber]
   );
 
   const transaction = (rows as any[])[0];
   if (!transaction) return null;
+
+  // Garantir que userId está presente
+  if (!transaction.userId) {
+    console.error("❌ [TRANSACTION] Transação encontrada mas sem userId:", requestNumber);
+    // Tentar buscar pelo campo user_id se userId não estiver presente
+    const [altRows] = await pool.query(
+      `SELECT user_id FROM transactions WHERE request_number = ?`,
+      [requestNumber]
+    );
+    if ((altRows as any[])[0]?.user_id) {
+      transaction.userId = (altRows as any[])[0].user_id;
+      console.log("✅ [TRANSACTION] userId recuperado do campo user_id:", transaction.userId);
+    }
+  }
 
   // Parse metadata se for string
   if (transaction.metadata && typeof transaction.metadata === "string") {
@@ -127,7 +158,24 @@ export async function updateTransactionStatus(
 
 export async function listUserTransactions(userId: number): Promise<Transaction[]> {
   const [rows] = await pool.query(
-    `SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC`,
+    `SELECT 
+      id,
+      user_id as userId,
+      request_number as requestNumber,
+      transaction_id as transactionId,
+      payment_method as paymentMethod,
+      amount,
+      status,
+      qr_code as qrCode,
+      qr_code_base64 as qrCodeBase64,
+      barcode,
+      digitable_line as digitableLine,
+      due_date as dueDate,
+      callback_url as callbackUrl,
+      metadata,
+      created_at as createdAt,
+      updated_at as updatedAt
+    FROM transactions WHERE user_id = ? ORDER BY created_at DESC`,
     [userId]
   );
 

@@ -587,6 +587,20 @@ export async function webhookController(req: Request, res: Response): Promise<vo
     // Se pagamento foi aprovado (PAID_OUT), atualizar saldo do usuário
     // Status possíveis: PAID_OUT (pago), CANCELED (cancelado), CHARGEBACK (estorno)
     if (status === "PAID_OUT" && transaction.status !== "PAID_OUT") {
+      // Validar que userId existe
+      if (!transaction.userId) {
+        console.error("❌ [WEBHOOK] Transação sem userId, não é possível atualizar saldo:", {
+          requestNumber,
+          transactionId: transaction.id,
+          status
+        });
+        res.status(500).json({ 
+          error: "Transação sem userId", 
+          message: "Não foi possível atualizar o saldo: transação não possui usuário associado" 
+        });
+        return;
+      }
+
       // Atualizar saldo do usuário
       await updateUserBalance(transaction.userId, transaction.amount);
       console.log(`✅ Saldo atualizado para usuário ${transaction.userId}: +${transaction.amount}`);

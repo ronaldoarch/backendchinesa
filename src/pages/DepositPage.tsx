@@ -17,6 +17,7 @@ type Transaction = {
   barcode?: string;
   digitableLine?: string;
   dueDate?: string;
+  userId?: number;
 };
 
 export function DepositPage() {
@@ -26,11 +27,77 @@ export function DepositPage() {
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState<{ show: boolean; amount: number } | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const savedUser = getUser();
     setUser(savedUser);
   }, []);
+
+  // Polling para verificar status do pagamento
+  useEffect(() => {
+    if (!transaction || transaction.status !== "PENDING" || !transaction.requestNumber) {
+      // Limpar polling se não há transação pendente
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
+      return;
+    }
+
+    console.log("🔄 [DEPOSIT] Iniciando polling para transação:", transaction.requestNumber);
+    const requestNumber = transaction.requestNumber; // Capturar valor para usar no intervalo
+    
+    const interval = setInterval(async () => {
+      try {
+        const response = await api.get<Transaction>(`/payments/transactions/${requestNumber}`);
+        const updatedTransaction = response.data;
+        
+        console.log("📊 [DEPOSIT] Status da transação:", updatedTransaction.status);
+        
+        if (updatedTransaction.status === "PAID_OUT") {
+          console.log("✅ [DEPOSIT] Pagamento confirmado!");
+          setTransaction(updatedTransaction);
+          setPaymentConfirmed({ show: true, amount: updatedTransaction.amount });
+          
+          // Atualizar saldo do usuário
+          try {
+            const userResponse = await api.get("/auth/me");
+            setUser(userResponse.data);
+            if (window.localStorage) {
+              window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+            }
+          } catch (error) {
+            console.error("Erro ao atualizar dados do usuário:", error);
+          }
+          
+          // Parar polling
+          clearInterval(interval);
+          setPollingInterval(null);
+        } else if (updatedTransaction.status === "CANCELED" || updatedTransaction.status === "FAILED") {
+          // Parar polling se cancelado ou falhou
+          clearInterval(interval);
+          setPollingInterval(null);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar status do pagamento:", error);
+      }
+    }, 3000); // Verificar a cada 3 segundos
+    
+    setPollingInterval(interval);
+    
+    // Limpar intervalo após 5 minutos (300 segundos)
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setPollingInterval(null);
+    }, 300000);
+    
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [transaction?.requestNumber, transaction?.status]);
 
   const quickAmounts = [50, 100, 500, 1000, 3000, 5000, 10000, 50000];
 
@@ -382,6 +449,82 @@ export function DepositPage() {
           </button>
         </form>
       </section>
+
+      {/* Popup de pagamento confirmado */}
+      {paymentConfirmed && paymentConfirmed.show && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "20px"
+          }}
+          onClick={() => setPaymentConfirmed(null)}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #1a1a1a, #2d2d2d)",
+              border: "2px solid var(--gold)",
+              borderRadius: "16px",
+              padding: "32px",
+              maxWidth: "400px",
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 20px 60px rgba(246, 196, 83, 0.3)"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                fontSize: "64px",
+                marginBottom: "16px",
+                animation: "bounce 0.5s ease"
+              }}
+            >
+              ✅
+            </div>
+            <h2 style={{
+              margin: "0 0 16px 0",
+              color: "var(--gold)",
+              fontSize: "24px",
+              fontWeight: "bold"
+            }}>
+              Pagamento Confirmado!
+            </h2>
+            <p style={{
+              margin: "0 0 24px 0",
+              color: "var(--text-main)",
+              fontSize: "16px"
+            }}>
+              Seu depósito de <strong style={{ color: "var(--gold)" }}>
+                R$ {paymentConfirmed.amount.toFixed(2).replace(".", ",")}
+              </strong> foi confirmado e já está disponível na sua conta!
+            </p>
+            <button
+              className="btn btn-gold"
+              onClick={() => {
+                setPaymentConfirmed(null);
+                setTransaction(null);
+              }}
+              style={{
+                width: "100%",
+                padding: "12px 24px",
+                fontSize: "16px",
+                fontWeight: "bold"
+              }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
