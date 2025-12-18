@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { api } from "../../services/api";
+import { api, getImageUrl } from "../../services/api";
 
 type Banner = {
   id?: number;
@@ -127,22 +127,6 @@ export function AdminBannersPage() {
     }
   }
 
-  const getImageUrl = (url: string) => {
-    if (!url) return null;
-    // Se já é uma URL completa (http/https), retornar como está
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    }
-    // Se começa com /, é uma URL relativa ao domínio atual - usar diretamente
-    if (url.startsWith("/")) {
-      return url;
-    }
-    // Caso contrário, construir URL completa
-    // Se o backend está no mesmo domínio, usar window.location.origin
-    // Se não, usar o baseURL da API sem /api
-    const baseUrl = window.location.origin;
-    return `${baseUrl}${url.startsWith("/") ? url : `/${url}`}`;
-  };
 
   return (
     <section className="admin-section">
