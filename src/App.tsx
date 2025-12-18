@@ -175,7 +175,7 @@ export function App() {
             ☰
           </button>
           <DynamicLogo
-            fallback={<span className="logo-text">BIGBET777</span>}
+            fallback={<span className="logo-text">H2bet</span>}
             className="logo-image"
             style={{ maxHeight: "48px", maxWidth: "180px", objectFit: "contain" }}
           />

@@ -39,7 +39,7 @@ export function SideMenu({ open, onClose }: Props) {
       >
         <header className="side-menu-header">
           <DynamicLogo
-            fallback={<span className="logo-text">BIGBET777</span>}
+            fallback={<span className="logo-text">H2bet</span>}
             className="logo-image"
             style={{ maxHeight: "48px", maxWidth: "200px", objectFit: "contain" }}
           />
