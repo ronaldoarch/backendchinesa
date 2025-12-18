@@ -7,6 +7,7 @@ import { createTransaction, updateTransactionStatus, updateUserBalance, findTran
 import { applyBonusToDeposit } from "../services/bonusService";
 import { dispatchEvent } from "../services/trackingService";
 import { pool } from "../config/database";
+import { env } from "../config/env";
 
 const pixRequestSchema = z.object({
   amount: z.number().positive(),
@@ -159,9 +160,10 @@ export async function createPixPaymentController(req: Request, res: Response): P
     // Calcular data de vencimento (padrão: 1 dia a partir de agora)
     const expirationDate = dueDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // Construir callback URL
-    const baseUrl = process.env.APP_URL || req.protocol + "://" + req.get("host");
-    const callbackUrl = `${baseUrl}/api/payments/webhook`;
+    // Construir callback URL usando a URL do backend (não do frontend)
+    // IMPORTANTE: O webhook deve apontar para o backend onde o servidor está rodando
+    const backendBaseUrl = env.backendUrl;
+    const callbackUrl = `${backendBaseUrl}/api/payments/webhook`;
 
     // Criar requisição para SuitPay
     // Mapear phone para phoneNumber (conforme documentação SuitPay)
@@ -340,9 +342,10 @@ export async function createCardPaymentController(req: Request, res: Response): 
     // Gerar requestNumber único
     const requestNumber = uuidv4();
 
-    // Construir callback URL
-    const baseUrl = process.env.APP_URL || req.protocol + "://" + req.get("host");
-    const callbackUrl = `${baseUrl}/api/payments/webhook`;
+    // Construir callback URL usando a URL do backend (não do frontend)
+    // IMPORTANTE: O webhook deve apontar para o backend onde o servidor está rodando
+    const backendBaseUrl = env.backendUrl;
+    const callbackUrl = `${backendBaseUrl}/api/payments/webhook`;
 
     // Criar requisição para SuitPay
     const suitpayRequest: SuitPayCardRequest = {
@@ -423,9 +426,10 @@ export async function createBoletoPaymentController(req: Request, res: Response)
     // Gerar requestNumber único
     const requestNumber = uuidv4();
 
-    // Construir callback URL
-    const baseUrl = process.env.APP_URL || req.protocol + "://" + req.get("host");
-    const callbackUrl = `${baseUrl}/api/payments/webhook`;
+    // Construir callback URL usando a URL do backend (não do frontend)
+    // IMPORTANTE: O webhook deve apontar para o backend onde o servidor está rodando
+    const backendBaseUrl = env.backendUrl;
+    const callbackUrl = `${backendBaseUrl}/api/payments/webhook`;
 
     // Criar requisição para SuitPay
     const suitpayRequest: SuitPayBoletoRequest = {
