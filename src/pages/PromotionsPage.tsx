@@ -142,9 +142,6 @@ function EventosView({ promotions, loading }: { promotions: Promotion[]; loading
 }
 
 function TarefaView() {
-  const [showPixModal, setShowPixModal] = useState(false);
-  const [pixKey, setPixKey] = useState("");
-  const [loadingPix, setLoadingPix] = useState(false);
   
   const initialTasks = [
     { id: "withdraw_account", title: "Adicionar conta de saque", bonus: "1,00", completed: false },
@@ -228,31 +225,6 @@ function TarefaView() {
     }
   }
 
-  async function handleSavePixKey() {
-    if (!pixKey || pixKey.trim() === "") {
-      alert("Por favor, informe a chave PIX");
-      return;
-    }
-
-    setLoadingPix(true);
-    try {
-      const response = await api.post("/rewards/redeem", { 
-        rewardId: "withdraw_account",
-        pixKey: pixKey.trim()
-      });
-      
-      if (response.data.success) {
-        alert("Chave PIX cadastrada com sucesso! Você ganhou R$ 1,00 em bônus!");
-        setShowPixModal(false);
-        setPixKey("");
-        await loadUserData();
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Erro ao cadastrar chave PIX");
-    } finally {
-      setLoadingPix(false);
-    }
-  }
 
   return (
     <div className="promos-tasks">
