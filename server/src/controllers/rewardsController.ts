@@ -152,18 +152,6 @@ export async function redeemRewardController(req: Request, res: Response): Promi
         return;
       }
 
-      // Verificar se já resgatou
-      const [existingRows] = await pool.query<RowDataPacket[]>(
-        `SELECT id FROM user_rewards
-         WHERE user_id = ? AND reward_id = ? AND redeemed = true`,
-        [userId, rewardId]
-      );
-
-      if ((existingRows as any[]).length > 0) {
-        res.status(400).json({ error: "Recompensa já foi resgatada" });
-        return;
-      }
-
       // Buscar estatísticas de indicação
       const { getReferralStats } = await import("../services/referralService");
       const stats = await getReferralStats(userId);
