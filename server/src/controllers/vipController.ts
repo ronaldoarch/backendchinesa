@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { getUserVipData, VIP_LEVELS } from "../services/vipService";
-import { asyncHandler } from "../middleware/errorHandler";
 
 export async function getVipDataController(req: Request, res: Response): Promise<void> {
   try {
