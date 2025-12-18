@@ -354,27 +354,6 @@ body {
   box-shadow: 0 0 12px rgba(246, 196, 83, 0.4);
 }
 
-.jackpot-bar {
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #4a3213, #b27a1a, #4a3213);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
-}
-
-.jackpot-label {
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  font-size: 11px;
-}
-
-.jackpot-value {
-  font-family: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
-  font-size: 14px;
-}
-
 .games-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

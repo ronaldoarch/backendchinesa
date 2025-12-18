@@ -756,11 +756,6 @@ export function HomePage() {
         </button>
       </section>
 
-      <section className="jackpot-bar">
-        <span className="jackpot-label">JACKPOT</span>
-        <span className="jackpot-value">115.752.746,45</span>
-      </section>
-
       <section className="games-grid">
         {loading ? (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "20px" }}>
