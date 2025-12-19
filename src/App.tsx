@@ -381,7 +381,7 @@ export function App() {
             <span className="bottom-nav-icon">
               <CreditCardIcon size={22} />
             </span>
-            <span className="bottom-nav-label">Depósito</span>
+            <span className="bottom-nav-label">Carteira</span>
           </NavLink>
           <NavLink
             to="/suporte"

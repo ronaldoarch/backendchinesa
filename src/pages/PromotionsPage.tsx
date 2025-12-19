@@ -151,10 +151,28 @@ function TarefaView() {
   const [tasks, setTasks] = useState(initialTasks);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [referralLink, setReferralLink] = useState<string>("");
 
   useEffect(() => {
     loadUserData();
+    loadReferralLink();
   }, []);
+
+  async function loadReferralLink() {
+    try {
+      const linkResponse = await api.get<{ referralCode: string; referralLink: string }>("/referrals/link");
+      setReferralLink(linkResponse.data.referralLink);
+    } catch (err) {
+      console.error("Erro ao carregar link de indicação:", err);
+    }
+  }
+
+  function copyReferralLink() {
+    if (referralLink) {
+      navigator.clipboard.writeText(referralLink);
+      alert("Link copiado para a área de transferência!");
+    }
+  }
 
   async function loadUserData() {
     try {
@@ -252,9 +270,41 @@ function TarefaView() {
                       Ganhe R$ 30 quando alguém se cadastrar pelo seu link e jogar R$ 100
                     </p>
                     {"progress" in task && (
-                      <p style={{ fontSize: "12px", color: "var(--gold)", fontWeight: "bold" }}>
+                      <p style={{ fontSize: "12px", color: "var(--gold)", fontWeight: "bold", marginBottom: "8px" }}>
                         Baús ganhos: {task.progress || 0} | Total: R$ {((task.progress || 0) * 30).toFixed(2).replace(".", ",")}
                       </p>
+                    )}
+                    {referralLink && (
+                      <div style={{ 
+                        marginTop: "8px", 
+                        padding: "8px", 
+                        background: "rgba(255, 255, 255, 0.05)", 
+                        borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        flexWrap: "wrap"
+                      }}>
+                        <span style={{ fontSize: "11px", color: "var(--text-muted)", flex: "1", minWidth: "100px", wordBreak: "break-all" }}>
+                          {referralLink}
+                        </span>
+                        <button
+                          onClick={copyReferralLink}
+                          style={{
+                            padding: "4px 8px",
+                            background: "var(--gold)",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          Copiar
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

@@ -429,7 +429,7 @@ export function DepositPage() {
   return (
     <div className="deposit-page">
       <header className="deposit-header">
-        <h1>Depósito e Saque</h1>
+        <h1>Carteira</h1>
       </header>
 
       {/* Abas */}
