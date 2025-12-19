@@ -701,8 +701,38 @@ export const suitpayService = {
       };
 
       console.log(`[SuitPay] Criando saque PIX:`, payload);
+      console.log(`[SuitPay] URL completa: ${SUITPAY_BASE_URL}/api/v1/gateway/pix-payout`);
 
-      const { data: apiResponse } = await client.post("/api/v1/gateway/pix-payout", payload);
+      let apiResponse;
+      try {
+        // Tentar primeiro o endpoint padrão
+        const { data } = await client.post("/api/v1/gateway/pix-payout", payload);
+        apiResponse = data;
+      } catch (error: any) {
+        // Se retornar 404, tentar endpoint alternativo
+        if (error.response?.status === 404) {
+          console.warn(`[SuitPay] Endpoint /api/v1/gateway/pix-payout não encontrado (404). Tentando endpoint alternativo...`);
+          try {
+            // Tentar endpoint alternativo sem "gateway"
+            const { data } = await client.post("/api/v1/pix/payout", payload);
+            apiResponse = data;
+            console.log(`[SuitPay] Endpoint alternativo funcionou: /api/v1/pix/payout`);
+          } catch (error2: any) {
+            // Se ainda falhar, tentar outro formato
+            console.warn(`[SuitPay] Endpoint /api/v1/pix/payout também falhou. Tentando /api/v1/pix/withdraw...`);
+            try {
+              const { data } = await client.post("/api/v1/pix/withdraw", payload);
+              apiResponse = data;
+              console.log(`[SuitPay] Endpoint alternativo funcionou: /api/v1/pix/withdraw`);
+            } catch (error3: any) {
+              // Se todos falharem, lançar o erro original
+              throw error;
+            }
+          }
+        } else {
+          throw error;
+        }
+      }
       
       console.log(`[SuitPay] Resposta do saque:`, apiResponse);
 
@@ -718,10 +748,23 @@ export const suitpayService = {
       };
     } catch (error: any) {
       console.error("❌ Erro ao criar saque PIX:", error);
+      console.error("❌ Status:", error.response?.status);
+      console.error("❌ Response data:", error.response?.data);
+      console.error("❌ URL tentada:", error.config?.url || `${SUITPAY_BASE_URL}/api/v1/gateway/pix-payout`);
+      
+      // Mensagem mais específica para 404
+      if (error.response?.status === 404) {
+        return {
+          success: false,
+          error: "Endpoint de saque não encontrado",
+          message: "O endpoint de saque PIX não está disponível. Verifique se sua conta SuitPay tem permissão para saques ou se o endpoint mudou na documentação."
+        };
+      }
+      
       return {
         success: false,
-        error: error.response?.data?.message || error.message || "Erro ao criar saque",
-        message: "Erro ao processar saque"
+        error: error.response?.data?.message || error.response?.data?.error || error.message || "Erro ao criar saque",
+        message: error.response?.data?.message || "Erro ao processar saque. Verifique se o endpoint está correto e se sua conta tem permissão para saques."
       };
     }
   }
