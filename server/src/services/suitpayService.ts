@@ -687,24 +687,49 @@ export const suitpayService = {
       // Detectar tipo de chave PIX conforme documentação SuitPay
       // Valores aceitos: "document", "phoneNumber", "email", "randomKey", "paymentCode"
       let typeKey = request.pixKeyType;
+      let processedKey = request.pixKey.trim();
+      
       if (!typeKey) {
-        const cleanKey = request.pixKey.replace(/[^\d]/g, "");
+        const cleanKey = processedKey.replace(/[^\d]/g, "");
         // CPF/CNPJ: 11 ou 14 dígitos
         if (/^\d{11}$/.test(cleanKey) || /^\d{14}$/.test(cleanKey)) {
           typeKey = "document";
-        } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.pixKey)) {
+        } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(processedKey)) {
           typeKey = "email";
-        } else if (/^\+?55\d{10,11}$/.test(request.pixKey.replace(/[^\d+]/g, "")) || /^\d{10,11}$/.test(cleanKey)) {
+        } else if (/^\+?55\d{10,11}$/.test(processedKey.replace(/[^\d+]/g, "")) || /^\d{10,11}$/.test(cleanKey)) {
           typeKey = "phoneNumber";
+          // IMPORTANTE: SuitPay espera apenas DDD + número (sem código do país)
+          // Remover +55 se presente, manter apenas DDD + número
+          if (processedKey.startsWith("+55")) {
+            processedKey = processedKey.replace(/^\+55/, "");
+          } else if (processedKey.startsWith("55") && cleanKey.length === 13) {
+            // Se começa com 55 e tem 13 dígitos, remover o 55 inicial
+            processedKey = cleanKey.substring(2);
+          } else {
+            // Se já está no formato correto (10 ou 11 dígitos), usar direto
+            processedKey = cleanKey;
+          }
+          console.log(`[SuitPay] Chave telefone processada: ${processedKey.substring(0, 4)}*** (tipo: ${typeKey})`);
         } else {
           // Chave aleatória (UUID ou similar)
           typeKey = "randomKey";
         }
+      } else if (typeKey === "phoneNumber") {
+        // Se o tipo já foi especificado como phoneNumber, processar a chave
+        const cleanKey = processedKey.replace(/[^\d]/g, "");
+        if (processedKey.startsWith("+55")) {
+          processedKey = processedKey.replace(/^\+55/, "");
+        } else if (processedKey.startsWith("55") && cleanKey.length === 13) {
+          processedKey = cleanKey.substring(2);
+        } else {
+          processedKey = cleanKey;
+        }
+        console.log(`[SuitPay] Chave telefone processada: ${processedKey.substring(0, 4)}*** (tipo: ${typeKey})`);
       }
 
       // Construir payload conforme documentação oficial
       const payload: any = {
-        key: request.pixKey.trim(),
+        key: processedKey,
         typeKey: typeKey,
         value: Number(request.amount.toFixed(2))
       };
