@@ -826,9 +826,12 @@ export async function createWithdrawController(req: Request, res: Response): Pro
 
     const { amount, pixKey } = parsed.data;
 
-    // Buscar saldo do usuário
+    // Buscar saldo e totais do usuário
     const [userRows] = await pool.query<RowDataPacket[]>(
-      "SELECT balance, bonus_balance FROM users WHERE id = ?",
+      `SELECT balance, bonus_balance, 
+              COALESCE(total_deposit_amount, 0) as total_deposit_amount,
+              COALESCE(total_bet_amount, 0) as total_bet_amount
+       FROM users WHERE id = ?`,
       [userId]
     );
 
@@ -839,12 +842,25 @@ export async function createWithdrawController(req: Request, res: Response): Pro
 
     const userBalance = Number(userRows[0].balance || 0);
     const bonusBalance = Number(userRows[0].bonus_balance || 0);
+    const totalDepositAmount = Number(userRows[0].total_deposit_amount || 0);
+    const totalBetAmount = Number(userRows[0].total_bet_amount || 0);
 
     // Verificar se o saldo é suficiente (apenas saldo normal, não bônus)
     if (userBalance < amount) {
       res.status(400).json({ 
         error: "Saldo insuficiente",
         message: `Você não pode sacar mais do que seu saldo disponível (R$ ${userBalance.toFixed(2)}). O bônus não pode ser sacado.`
+      });
+      return;
+    }
+
+    // IMPORTANTE: Validar se o usuário já apostou todo o valor depositado
+    // O usuário só pode sacar após ter jogado todo o valor depositado
+    if (totalDepositAmount > 0 && totalBetAmount < totalDepositAmount) {
+      const remainingToBet = totalDepositAmount - totalBetAmount;
+      res.status(400).json({ 
+        error: "Aposta pendente",
+        message: `Você precisa apostar R$ ${remainingToBet.toFixed(2)} antes de poder sacar. Você já depositou R$ ${totalDepositAmount.toFixed(2)} e apostou R$ ${totalBetAmount.toFixed(2)}.`
       });
       return;
     }
