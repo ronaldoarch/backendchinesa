@@ -110,7 +110,7 @@ export async function playfiversCallbackController(req: Request, res: Response):
 
       // Função auxiliar para processar desconto de aposta
       async function processBet(bet: number) {
-        if (bet > 0) {
+        if (bet > 0 && userId !== null) {
           await updateUserBalance(userId, -bet);
           currentBalance -= bet;
           
@@ -147,7 +147,7 @@ export async function playfiversCallbackController(req: Request, res: Response):
         }
         
         // Adicionar ganho (win_amount geralmente já é o valor total que o usuário deve receber)
-        if (winValue > 0) {
+        if (winValue > 0 && userId !== null) {
           await updateUserBalance(userId, winValue);
           currentBalance += winValue;
           console.log(`✅ [PLAYFIVERS CALLBACK] Ganho de R$ ${winValue} creditado para usuário ${userId}. Novo saldo: R$ ${currentBalance}`);
