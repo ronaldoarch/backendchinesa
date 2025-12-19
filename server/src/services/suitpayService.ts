@@ -650,14 +650,19 @@ export const suitpayService = {
   },
 
   /**
-   * Criar saque PIX
-   * POST /api/v1/gateway/pix-payout
+   * Criar saque PIX (Transferência via PIX - Cash-out)
+   * POST /api/v1/gateway/pix-payment
+   * 
+   * IMPORTANTE: É necessário cadastrar o IP do servidor no painel SuitPay
+   * Menu: GATEWAY/CHECKOUT -> GERENCIAMENTO DE IPs
    */
   async createPixWithdraw(request: {
     requestNumber: string;
     amount: number;
     pixKey: string;
-    pixKeyType?: "CPF" | "EMAIL" | "PHONE" | "RANDOM";
+    pixKeyType?: "document" | "phoneNumber" | "email" | "randomKey" | "paymentCode";
+    callbackUrl?: string;
+    documentValidation?: string;
   }): Promise<SuitPayResponse<{
     requestNumber: string;
     transactionId?: string;
@@ -679,92 +684,138 @@ export const suitpayService = {
 
       const client = await createClient();
       
-      // Detectar tipo de chave PIX
-      let pixKeyType = request.pixKeyType;
-      if (!pixKeyType) {
-        if (/^\d{11}$/.test(request.pixKey.replace(/[^\d]/g, ""))) {
-          pixKeyType = "CPF";
+      // Detectar tipo de chave PIX conforme documentação SuitPay
+      // Valores aceitos: "document", "phoneNumber", "email", "randomKey", "paymentCode"
+      let typeKey = request.pixKeyType;
+      if (!typeKey) {
+        const cleanKey = request.pixKey.replace(/[^\d]/g, "");
+        // CPF/CNPJ: 11 ou 14 dígitos
+        if (/^\d{11}$/.test(cleanKey) || /^\d{14}$/.test(cleanKey)) {
+          typeKey = "document";
         } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.pixKey)) {
-          pixKeyType = "EMAIL";
-        } else if (/^\+?55\d{10,11}$/.test(request.pixKey.replace(/[^\d+]/g, ""))) {
-          pixKeyType = "PHONE";
+          typeKey = "email";
+        } else if (/^\+?55\d{10,11}$/.test(request.pixKey.replace(/[^\d+]/g, "")) || /^\d{10,11}$/.test(cleanKey)) {
+          typeKey = "phoneNumber";
         } else {
-          pixKeyType = "RANDOM";
+          // Chave aleatória (UUID ou similar)
+          typeKey = "randomKey";
         }
       }
 
-      const payload = {
-        requestNumber: request.requestNumber,
-        value: request.amount.toFixed(2),
-        pixKey: request.pixKey,
-        pixKeyType: pixKeyType
+      // Construir payload conforme documentação oficial
+      const payload: any = {
+        key: request.pixKey.trim(),
+        typeKey: typeKey,
+        value: Number(request.amount.toFixed(2))
       };
 
-      console.log(`[SuitPay] Criando saque PIX:`, payload);
-      console.log(`[SuitPay] URL completa: ${SUITPAY_BASE_URL}/api/v1/gateway/pix-payout`);
-
-      let apiResponse;
-      try {
-        // Tentar primeiro o endpoint padrão
-        const { data } = await client.post("/api/v1/gateway/pix-payout", payload);
-        apiResponse = data;
-      } catch (error: any) {
-        // Se retornar 404, tentar endpoint alternativo
-        if (error.response?.status === 404) {
-          console.warn(`[SuitPay] Endpoint /api/v1/gateway/pix-payout não encontrado (404). Tentando endpoint alternativo...`);
-          try {
-            // Tentar endpoint alternativo sem "gateway"
-            const { data } = await client.post("/api/v1/pix/payout", payload);
-            apiResponse = data;
-            console.log(`[SuitPay] Endpoint alternativo funcionou: /api/v1/pix/payout`);
-          } catch (error2: any) {
-            // Se ainda falhar, tentar outro formato
-            console.warn(`[SuitPay] Endpoint /api/v1/pix/payout também falhou. Tentando /api/v1/pix/withdraw...`);
-            try {
-              const { data } = await client.post("/api/v1/pix/withdraw", payload);
-              apiResponse = data;
-              console.log(`[SuitPay] Endpoint alternativo funcionou: /api/v1/pix/withdraw`);
-            } catch (error3: any) {
-              // Se todos falharem, lançar o erro original
-              throw error;
-            }
-          }
-        } else {
-          throw error;
-        }
+      // Adicionar campos opcionais
+      if (request.callbackUrl) {
+        payload.callbackUrl = request.callbackUrl;
       }
+      if (request.documentValidation) {
+        payload.documentValidation = request.documentValidation;
+      }
+      // Usar requestNumber como externalId para controle de duplicidade
+      if (request.requestNumber) {
+        payload.externalId = request.requestNumber;
+      }
+
+      console.log(`[SuitPay] Criando saque PIX (Cash-out):`, {
+        ...payload,
+        key: payload.key.substring(0, 4) + "***" // Log parcial por segurança
+      });
+      console.log(`[SuitPay] URL completa: ${baseUrl}/api/v1/gateway/pix-payment`);
+
+      const { data: apiResponse } = await client.post("/api/v1/gateway/pix-payment", payload);
       
       console.log(`[SuitPay] Resposta do saque:`, apiResponse);
 
+      // Mapear resposta conforme documentação
+      // response pode ser: "OK", "ACCOUNT_DOCUMENTS_NOT_VALIDATED", "NO_FUNDS", "PIX_KEY_NOT_FOUND", etc.
+      const isSuccess = apiResponse.response === "OK";
+      
+      if (!isSuccess) {
+        // Mapear mensagens de erro da SuitPay
+        let errorMessage = "Erro ao processar saque";
+        switch (apiResponse.response) {
+          case "ACCOUNT_DOCUMENTS_NOT_VALIDATED":
+            errorMessage = "Conta não validada. Verifique a documentação da conta SuitPay.";
+            break;
+          case "NO_FUNDS":
+            errorMessage = "Saldo insuficiente na conta SuitPay.";
+            break;
+          case "PIX_KEY_NOT_FOUND":
+            errorMessage = "Chave PIX não encontrada. Verifique se a chave está correta.";
+            break;
+          case "UNAUTHORIZED_IP":
+            errorMessage = "IP não autorizado. Cadastre o IP do servidor no painel SuitPay (GATEWAY/CHECKOUT -> GERENCIAMENTO DE IPs).";
+            break;
+          case "DOCUMENT_VALIDATE":
+            errorMessage = "A chave PIX não pertence ao documento informado na validação.";
+            break;
+          case "DUPLICATE_EXTERNAL_ID":
+            errorMessage = "External ID já foi utilizado. Tente novamente.";
+            break;
+          case "ERROR":
+            errorMessage = "Erro interno no processamento do saque.";
+            break;
+          default:
+            errorMessage = apiResponse.response || "Erro desconhecido ao processar saque.";
+        }
+        
+        return {
+          success: false,
+          error: apiResponse.response || "Erro ao criar saque",
+          message: errorMessage
+        };
+      }
+
       return {
-        success: apiResponse.response === "OK" || apiResponse.success === true,
+        success: true,
         data: {
           requestNumber: request.requestNumber,
-          transactionId: apiResponse.idTransaction || apiResponse.transactionId,
-          status: apiResponse.response === "OK" ? "PENDING" : "FAILED",
+          transactionId: apiResponse.idTransaction,
+          status: "PENDING", // SuitPay processa assincronamente
           amount: request.amount
         },
-        message: apiResponse.message || "Saque criado com sucesso"
+        message: "Saque criado com sucesso"
       };
     } catch (error: any) {
       console.error("❌ Erro ao criar saque PIX:", error);
       console.error("❌ Status:", error.response?.status);
       console.error("❌ Response data:", error.response?.data);
-      console.error("❌ URL tentada:", error.config?.url || `${SUITPAY_BASE_URL}/api/v1/gateway/pix-payout`);
+      console.error("❌ URL tentada:", error.config?.url || `${baseUrl}/api/v1/gateway/pix-payment`);
       
-      // Mensagem mais específica para 404
+      // Mensagens específicas por status HTTP
+      if (error.response?.status === 400) {
+        return {
+          success: false,
+          error: "Dados inválidos",
+          message: error.response?.data?.message || "Verifique os campos enviados (key, typeKey, value)."
+        };
+      }
+      
       if (error.response?.status === 404) {
         return {
           success: false,
-          error: "Endpoint de saque não encontrado",
-          message: "O endpoint de saque PIX não está disponível. Verifique se sua conta SuitPay tem permissão para saques ou se o endpoint mudou na documentação."
+          error: "Chave PIX não encontrada",
+          message: "A chave PIX informada não foi encontrada. Verifique se está correta."
+        };
+      }
+      
+      if (error.response?.status === 500) {
+        return {
+          success: false,
+          error: "Erro interno",
+          message: "Erro interno no servidor SuitPay. Tente novamente mais tarde."
         };
       }
       
       return {
         success: false,
         error: error.response?.data?.message || error.response?.data?.error || error.message || "Erro ao criar saque",
-        message: error.response?.data?.message || "Erro ao processar saque. Verifique se o endpoint está correto e se sua conta tem permissão para saques."
+        message: error.response?.data?.message || "Erro ao processar saque. Verifique se o IP do servidor está cadastrado no painel SuitPay."
       };
     }
   }

@@ -852,11 +852,16 @@ export async function createWithdrawController(req: Request, res: Response): Pro
     // Gerar número único da requisição
     const requestNumber = uuidv4();
 
+    // Construir callback URL para webhook do saque
+    const backendBaseUrl = env.backendUrl;
+    const callbackUrl = `${backendBaseUrl}/api/payments/webhook`;
+
     // Criar saque via SuitPay
     const withdrawResult = await suitpayService.createPixWithdraw({
       requestNumber,
       amount,
-      pixKey: pixKey.trim()
+      pixKey: pixKey.trim(),
+      callbackUrl: callbackUrl
     });
 
     if (!withdrawResult.success || !withdrawResult.data) {
