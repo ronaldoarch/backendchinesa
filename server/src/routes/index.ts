@@ -103,7 +103,12 @@ apiRouter.get("/ip-info", (req, res) => {
   });
 });
 
+// Webhooks do PlayFivers (conforme documentação oficial)
+// POST /webhook - Webhook de Saldo (type: "BALANCE")
+// POST /api/webhook - Webhook de Transação (type: "WinBet", "LoseBet", "Bet")
 apiRouter.post("/playfivers/callback", playfiversCallbackController);
+apiRouter.post("/webhook", playfiversCallbackController);
+apiRouter.post("/api/webhook", playfiversCallbackController);
 
 // Rotas públicas
 apiRouter.use("/auth", authRouter);

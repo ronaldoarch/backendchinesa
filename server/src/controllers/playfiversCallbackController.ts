@@ -19,16 +19,19 @@ export async function playfiversCallbackController(req: Request, res: Response):
     const agentCode = req.body.agent_code || req.body.agentCode;
     const userBalance = req.body.user_balance || req.body.userBalance || req.body.balance;
     
-    // Tentar diferentes formatos para bet_amount
-    const betAmount = req.body.bet_amount || 
+    // Segundo a documentação oficial, bet e win estão dentro de slot
+    // Formato: { type: "WinBet", slot: { bet: 50, win: 100 } }
+    // Priorizar slot.bet e slot.win conforme documentação oficial
+    const betAmount = slotBet || 
+                     req.body.bet_amount || 
                      req.body.betAmount || 
                      req.body.bet || 
                      req.body.amount || 
                      req.body.stake || 
                      0;
     
-    // Tentar diferentes formatos para win_amount
-    const winAmount = req.body.win_amount || 
+    const winAmount = slotWin || 
+                     req.body.win_amount || 
                      req.body.winAmount || 
                      req.body.win || 
                      req.body.payout || 
@@ -114,34 +117,20 @@ export async function playfiversCallbackController(req: Request, res: Response):
       return;
     }
 
-    if (eventType === "Bet" || eventType === "LoseBet" || eventType === "WinBet" || 
-        eventType === "bet" || eventType === "losebet" || eventType === "winbet") {
+    // Verificar se é um evento de aposta (case-insensitive)
+    const normalizedEventType = eventType?.toString().toLowerCase();
+    const isBetEvent = normalizedEventType === "bet" || 
+                      normalizedEventType === "winbet" || 
+                      normalizedEventType === "win_bet" ||
+                      normalizedEventType === "losebet" || 
+                      normalizedEventType === "lose_bet" ||
+                      (betValue > 0 && !eventType); // Se tem betValue mas não tem eventType, pode ser uma aposta
+
+    if (isBetEvent) {
       // Processar aposta
-      // Tentar extrair valores de diferentes formatos
-      let betValue = 0;
-      let winValue = 0;
-      
-      // Tentar diferentes formatos para bet
-      if (betAmount) {
-        betValue = Number(betAmount);
-      } else if (req.body.bet) {
-        betValue = Number(req.body.bet);
-      } else if (req.body.amount) {
-        betValue = Number(req.body.amount);
-      } else if (req.body.stake) {
-        betValue = Number(req.body.stake);
-      }
-      
-      // Tentar diferentes formatos para win
-      if (winAmount) {
-        winValue = Number(winAmount);
-      } else if (req.body.win) {
-        winValue = Number(req.body.win);
-      } else if (req.body.payout) {
-        winValue = Number(req.body.payout);
-      } else if (req.body.prize) {
-        winValue = Number(req.body.prize);
-      }
+      // Extrair valores (priorizar slot.bet e slot.win conforme documentação)
+      let betValue = Number(slotBet || betAmount || 0);
+      let winValue = Number(slotWin || winAmount || 0);
 
       console.log("🎰 [PLAYFIVERS CALLBACK] Processando aposta:", {
         userId,
@@ -180,11 +169,15 @@ export async function playfiversCallbackController(req: Request, res: Response):
         }
       }
 
-      if (eventType === "Bet") {
+      // Normalizar eventType para comparação (case-insensitive)
+      const normalizedEventType = eventType?.toString().toLowerCase();
+
+      if (normalizedEventType === "bet") {
         // Apenas aposta (ainda não sabemos se ganhou ou perdeu)
         // Descontar valor da aposta
+        console.log(`🎲 [PLAYFIVERS CALLBACK] Evento Bet detectado - descontando R$ ${betValue}`);
         await processBet(betValue);
-      } else if (eventType === "WinBet") {
+      } else if (normalizedEventType === "winbet" || normalizedEventType === "win_bet") {
         // Usuário ganhou
         // Se betValue > 0, descontar a aposta primeiro (caso não tenha sido descontada no evento "Bet")
         if (betValue > 0) {
@@ -197,13 +190,26 @@ export async function playfiversCallbackController(req: Request, res: Response):
           currentBalance += winValue;
           console.log(`✅ [PLAYFIVERS CALLBACK] Ganho de R$ ${winValue} creditado para usuário ${userId}. Novo saldo: R$ ${currentBalance}`);
         }
-      } else if (eventType === "LoseBet") {
+      } else if (normalizedEventType === "losebet" || normalizedEventType === "lose_bet") {
         // Usuário perdeu
         // Se betValue > 0, descontar a aposta (caso não tenha sido descontada no evento "Bet")
+        console.log(`❌ [PLAYFIVERS CALLBACK] Evento LoseBet detectado - aposta perdida`);
         if (betValue > 0) {
           await processBet(betValue);
         } else {
           console.log(`✅ [PLAYFIVERS CALLBACK] Aposta perdida confirmada para usuário ${userId}. Saldo: R$ ${currentBalance}`);
+        }
+      } else {
+        // Se chegou aqui, o eventType não foi reconhecido mas pode ser uma aposta
+        // Tentar processar se houver betValue
+        console.warn(`⚠️ [PLAYFIVERS CALLBACK] EventType não reconhecido: ${eventType}, mas tentando processar se houver betValue`);
+        if (betValue > 0) {
+          await processBet(betValue);
+        }
+        if (winValue > 0 && userId !== null) {
+          await updateUserBalance(userId, winValue);
+          currentBalance += winValue;
+          console.log(`✅ [PLAYFIVERS CALLBACK] Ganho de R$ ${winValue} creditado (evento não reconhecido). Novo saldo: R$ ${currentBalance}`);
         }
       }
 
@@ -215,8 +221,18 @@ export async function playfiversCallbackController(req: Request, res: Response):
       return;
     }
 
+    // Se não há eventType, pode ser um callback de saldo simples
+    if (!eventType && userCode) {
+      console.log("💰 [PLAYFIVERS CALLBACK] Callback sem tipo de evento - retornando saldo atual");
+      res.status(200).json({ 
+        msg: "",
+        balance: currentBalance
+      });
+      return;
+    }
+
     // Evento desconhecido - retornar saldo atual
-    console.warn("⚠️ [PLAYFIVERS CALLBACK] Tipo de evento desconhecido:", eventType);
+    console.warn("⚠️ [PLAYFIVERS CALLBACK] Tipo de evento desconhecido:", eventType, "Body completo:", JSON.stringify(req.body, null, 2));
     res.status(200).json({ 
       msg: "",
       balance: currentBalance
