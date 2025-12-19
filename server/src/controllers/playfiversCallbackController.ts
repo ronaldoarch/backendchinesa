@@ -21,6 +21,10 @@ export async function playfiversCallbackController(req: Request, res: Response):
     
     // Segundo a documentação oficial, bet e win estão dentro de slot
     // Formato: { type: "WinBet", slot: { bet: 50, win: 100 } }
+    const slot = req.body.slot || {};
+    const slotBet = slot.bet || 0;
+    const slotWin = slot.win || 0;
+    
     // Priorizar slot.bet e slot.win conforme documentação oficial
     const betAmount = slotBet || 
                      req.body.bet_amount || 
@@ -40,7 +44,6 @@ export async function playfiversCallbackController(req: Request, res: Response):
     
     const gameOriginal = req.body.game_original || req.body.gameOriginal;
     const gameType = req.body.game_type || req.body.gameType;
-    const slot = req.body.slot;
 
     console.log("📥 [PLAYFIVERS CALLBACK] Dados extraídos:", {
       type: eventType,
@@ -119,6 +122,11 @@ export async function playfiversCallbackController(req: Request, res: Response):
 
     // Verificar se é um evento de aposta (case-insensitive)
     const normalizedEventType = eventType?.toString().toLowerCase();
+    
+    // Extrair valores (priorizar slot.bet e slot.win conforme documentação)
+    let betValue = Number(slotBet || betAmount || 0);
+    let winValue = Number(slotWin || winAmount || 0);
+    
     const isBetEvent = normalizedEventType === "bet" || 
                       normalizedEventType === "winbet" || 
                       normalizedEventType === "win_bet" ||
@@ -128,9 +136,6 @@ export async function playfiversCallbackController(req: Request, res: Response):
 
     if (isBetEvent) {
       // Processar aposta
-      // Extrair valores (priorizar slot.bet e slot.win conforme documentação)
-      let betValue = Number(slotBet || betAmount || 0);
-      let winValue = Number(slotWin || winAmount || 0);
 
       console.log("🎰 [PLAYFIVERS CALLBACK] Processando aposta:", {
         userId,
