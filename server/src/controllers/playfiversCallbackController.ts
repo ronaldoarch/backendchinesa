@@ -9,17 +9,37 @@ import { trackReferralBet } from "../services/referralService";
  */
 export async function playfiversCallbackController(req: Request, res: Response): Promise<void> {
   try {
-    const eventType = req.body.type;
-    const userCode = req.body.user_code;
-    const agentCode = req.body.agent_code;
-    const userBalance = req.body.user_balance;
-    const betAmount = req.body.bet_amount || req.body.bet || 0;
-    const winAmount = req.body.win_amount || req.body.win || 0;
-    const gameOriginal = req.body.game_original;
-    const gameType = req.body.game_type;
+    // Log completo do body recebido para debug
+    console.log("📥 [PLAYFIVERS CALLBACK] Body completo recebido:", JSON.stringify(req.body, null, 2));
+    console.log("📥 [PLAYFIVERS CALLBACK] Headers:", req.headers);
+
+    // Tentar diferentes formatos de campos (PlayFivers pode usar diferentes nomes)
+    const eventType = req.body.type || req.body.event_type || req.body.event;
+    const userCode = req.body.user_code || req.body.userCode || req.body.username;
+    const agentCode = req.body.agent_code || req.body.agentCode;
+    const userBalance = req.body.user_balance || req.body.userBalance || req.body.balance;
+    
+    // Tentar diferentes formatos para bet_amount
+    const betAmount = req.body.bet_amount || 
+                     req.body.betAmount || 
+                     req.body.bet || 
+                     req.body.amount || 
+                     req.body.stake || 
+                     0;
+    
+    // Tentar diferentes formatos para win_amount
+    const winAmount = req.body.win_amount || 
+                     req.body.winAmount || 
+                     req.body.win || 
+                     req.body.payout || 
+                     req.body.prize || 
+                     0;
+    
+    const gameOriginal = req.body.game_original || req.body.gameOriginal;
+    const gameType = req.body.game_type || req.body.gameType;
     const slot = req.body.slot;
 
-    console.log("📥 [PLAYFIVERS CALLBACK] Evento recebido:", {
+    console.log("📥 [PLAYFIVERS CALLBACK] Dados extraídos:", {
       type: eventType,
       user_code: userCode,
       agent_code: agentCode,
@@ -94,10 +114,34 @@ export async function playfiversCallbackController(req: Request, res: Response):
       return;
     }
 
-    if (eventType === "Bet" || eventType === "LoseBet" || eventType === "WinBet") {
+    if (eventType === "Bet" || eventType === "LoseBet" || eventType === "WinBet" || 
+        eventType === "bet" || eventType === "losebet" || eventType === "winbet") {
       // Processar aposta
-      const betValue = Number(betAmount || req.body.bet || 0);
-      const winValue = Number(winAmount || req.body.win || 0);
+      // Tentar extrair valores de diferentes formatos
+      let betValue = 0;
+      let winValue = 0;
+      
+      // Tentar diferentes formatos para bet
+      if (betAmount) {
+        betValue = Number(betAmount);
+      } else if (req.body.bet) {
+        betValue = Number(req.body.bet);
+      } else if (req.body.amount) {
+        betValue = Number(req.body.amount);
+      } else if (req.body.stake) {
+        betValue = Number(req.body.stake);
+      }
+      
+      // Tentar diferentes formatos para win
+      if (winAmount) {
+        winValue = Number(winAmount);
+      } else if (req.body.win) {
+        winValue = Number(req.body.win);
+      } else if (req.body.payout) {
+        winValue = Number(req.body.payout);
+      } else if (req.body.prize) {
+        winValue = Number(req.body.prize);
+      }
 
       console.log("🎰 [PLAYFIVERS CALLBACK] Processando aposta:", {
         userId,
@@ -105,7 +149,8 @@ export async function playfiversCallbackController(req: Request, res: Response):
         betAmount: betValue,
         winAmount: winValue,
         currentBalance,
-        body: req.body
+        bodyKeys: Object.keys(req.body),
+        bodyValues: Object.values(req.body)
       });
 
       // Função auxiliar para processar desconto de aposta
