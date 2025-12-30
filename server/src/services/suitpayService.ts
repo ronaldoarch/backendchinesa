@@ -818,11 +818,33 @@ export const suitpayService = {
     } catch (error: any) {
       console.error("❌ Erro ao criar saque PIX:", error);
       console.error("❌ Status:", error.response?.status);
-      console.error("❌ Response data:", error.response?.data);
+      console.error("❌ Response data:", JSON.stringify(error.response?.data, null, 2));
       console.error("❌ URL tentada:", error.config?.url || `${baseUrl}/api/v1/gateway/pix-payment`);
+      
+      // Verificar se o erro é NO_FUNDS na resposta da SuitPay
+      const responseData = error.response?.data;
+      const responseCode = responseData?.response || responseData?.error;
+      
+      if (responseCode === "NO_FUNDS" || responseData?.message?.includes("NO_FUNDS")) {
+        console.log("💰 [SuitPay] Erro NO_FUNDS detectado - enviando para análise");
+        return {
+          success: false,
+          error: "NO_FUNDS",
+          message: "Saldo insuficiente na conta SuitPay."
+        };
+      }
       
       // Mensagens específicas por status HTTP
       if (error.response?.status === 400) {
+        // Se a resposta contém um código de erro específico, usar ele
+        if (responseCode) {
+          return {
+            success: false,
+            error: responseCode,
+            message: responseData?.message || error.response?.data?.message || "Erro ao processar saque."
+          };
+        }
+        
         return {
           success: false,
           error: "Dados inválidos",

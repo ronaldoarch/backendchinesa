@@ -418,10 +418,21 @@ export function DepositPage() {
       }
     } catch (error: any) {
       console.error("Erro ao criar saque:", error);
+      console.error("Erro completo:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       let errorMsg = "Erro ao processar saque";
       
-      if (error.response?.data?.error) {
+      // Priorizar mensagem específica do backend
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
+      } else if (error.message) {
+        errorMsg = error.message;
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
       } else if (error.message) {
