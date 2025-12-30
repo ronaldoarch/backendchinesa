@@ -34,3 +34,4 @@ DELETE FROM referral_bets;
 ```
 
 ## ATENÇÃO: Este comando deleta dados importantes!
+

@@ -763,7 +763,9 @@ export const suitpayService = {
       if (!isSuccess) {
         // Mapear mensagens de erro da SuitPay
         let errorMessage = "Erro ao processar saque";
-        switch (apiResponse.response) {
+        const errorCode = apiResponse.response || "";
+        
+        switch (errorCode) {
           case "ACCOUNT_DOCUMENTS_NOT_VALIDATED":
             errorMessage = "Conta não validada. Verifique a documentação da conta SuitPay.";
             break;
@@ -786,12 +788,19 @@ export const suitpayService = {
             errorMessage = "Erro interno no processamento do saque.";
             break;
           default:
-            errorMessage = apiResponse.response || "Erro desconhecido ao processar saque.";
+            errorMessage = errorCode || "Erro desconhecido ao processar saque.";
         }
+        
+        console.log("⚠️ [SuitPay] Erro no saque:", {
+          response: apiResponse.response,
+          errorCode,
+          errorMessage,
+          fullResponse: apiResponse
+        });
         
         return {
           success: false,
-          error: apiResponse.response || "Erro ao criar saque",
+          error: errorCode, // Retornar o código do erro (NO_FUNDS, etc)
           message: errorMessage
         };
       }

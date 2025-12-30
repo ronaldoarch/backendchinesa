@@ -36,3 +36,4 @@ SELECT
   (SELECT COALESCE(SUM(total_deposit_amount), 0) FROM users) as total_deposits,
   (SELECT COALESCE(SUM(total_withdrawal_amount), 0) FROM users) as total_withdrawals,
   (SELECT COALESCE(SUM(total_bet_amount), 0) FROM users) as total_bets;
+

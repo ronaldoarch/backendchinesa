@@ -880,8 +880,21 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       callbackUrl: callbackUrl
     });
 
+    console.log("🔍 [WITHDRAW] Resultado SuitPay:", {
+      success: withdrawResult.success,
+      error: withdrawResult.error,
+      message: withdrawResult.message
+    });
+
     // Se não houver saldo na conta SuitPay, enviar para análise
-    if (!withdrawResult.success && withdrawResult.error === "NO_FUNDS") {
+    // Verificar tanto o error quanto a mensagem (pode vir de diferentes formatos)
+    const isNoFunds = !withdrawResult.success && (
+      withdrawResult.error === "NO_FUNDS" || 
+      withdrawResult.message?.includes("Saldo insuficiente na conta SuitPay") ||
+      withdrawResult.message?.includes("NO_FUNDS")
+    );
+
+    if (isNoFunds) {
       // Criar transação com status PENDING (em análise)
       const transaction = await createTransaction({
         userId,
@@ -917,8 +930,14 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       return;
     }
 
-    // Se houver outro erro, retornar erro
+    // Se houver outro erro (que não seja NO_FUNDS), retornar erro
     if (!withdrawResult.success || !withdrawResult.data) {
+      // Se já foi processado como NO_FUNDS acima, não chegará aqui
+      console.error("❌ [WITHDRAW] Erro ao criar saque:", {
+        error: withdrawResult.error,
+        message: withdrawResult.message
+      });
+      
       res.status(400).json({ 
         error: withdrawResult.error || "Erro ao criar saque",
         message: withdrawResult.message || "Não foi possível processar o saque"
