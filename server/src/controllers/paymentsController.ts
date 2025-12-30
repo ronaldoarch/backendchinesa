@@ -880,6 +880,44 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       callbackUrl: callbackUrl
     });
 
+    // Se não houver saldo na conta SuitPay, enviar para análise
+    if (!withdrawResult.success && withdrawResult.error === "NO_FUNDS") {
+      // Criar transação com status PENDING (em análise)
+      const transaction = await createTransaction({
+        userId,
+        requestNumber,
+        paymentMethod: "PIX",
+        amount: -amount, // Negativo para saque
+        status: "PENDING", // Status PENDING indica que está em análise
+        transactionId: null,
+        metadata: {
+          pixKey: pixKey.trim(),
+          type: "withdraw",
+          needsAnalysis: true, // Flag para indicar que precisa de análise
+          reason: "Saldo insuficiente na conta SuitPay"
+        }
+      });
+
+      // NÃO descontar o saldo do usuário ainda (será descontado quando aprovado)
+      console.log(`📋 Saque enviado para análise: usuário ${userId}, valor R$ ${amount}, requestNumber: ${requestNumber} (Saldo insuficiente na SuitPay)`);
+
+      res.json({
+        success: true,
+        transaction: {
+          id: transaction.id,
+          requestNumber: transaction.requestNumber,
+          transactionId: transaction.transactionId,
+          paymentMethod: transaction.paymentMethod,
+          amount: Math.abs(transaction.amount),
+          status: "ANALYSIS", // Status especial para o frontend mostrar notificação
+          needsAnalysis: true
+        },
+        message: "Solicitação de saque enviada para análise"
+      });
+      return;
+    }
+
+    // Se houver outro erro, retornar erro
     if (!withdrawResult.success || !withdrawResult.data) {
       res.status(400).json({ 
         error: withdrawResult.error || "Erro ao criar saque",
@@ -888,7 +926,7 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       return;
     }
 
-    // Criar transação no banco (tipo WITHDRAW)
+    // Se sucesso, criar transação normalmente
     const transaction = await createTransaction({
       userId,
       requestNumber,

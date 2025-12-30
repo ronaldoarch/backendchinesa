@@ -385,7 +385,7 @@ export function DepositPage() {
     setTransaction(null);
 
     try {
-      const response = await api.post<{ success: boolean; transaction: Transaction }>("/payments/withdraw", {
+      const response = await api.post<{ success: boolean; transaction: Transaction; message?: string }>("/payments/withdraw", {
         amount: amountValue,
         pixKey: pixKey.trim()
       });
@@ -395,15 +395,23 @@ export function DepositPage() {
         setAmount("");
         setPixKey("");
         
-        // Atualizar saldo do usuário
-        try {
-          const userResponse = await api.get("/auth/me");
-          setUser(userResponse.data);
-          if (window.localStorage) {
-            window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+        // Verificar se está em análise
+        if (response.data.transaction.status === "ANALYSIS" || (response.data.transaction as any).needsAnalysis) {
+          // Mostrar notificação especial para análise
+          alert("Solicitação de saque em análise\n\nSua solicitação foi enviada para análise. Você será notificado quando o saque for processado.");
+        }
+        
+        // Atualizar saldo do usuário (só se não estiver em análise, pois o saldo não foi descontado)
+        if (!(response.data.transaction.status === "ANALYSIS" || (response.data.transaction as any).needsAnalysis)) {
+          try {
+            const userResponse = await api.get("/auth/me");
+            setUser(userResponse.data);
+            if (window.localStorage) {
+              window.localStorage.setItem("user", JSON.stringify(userResponse.data));
+            }
+          } catch (error) {
+            console.error("Erro ao atualizar dados do usuário:", error);
           }
-        } catch (error) {
-          console.error("Erro ao atualizar dados do usuário:", error);
         }
       } else {
         setError("Erro ao criar saque. Tente novamente.");
@@ -981,20 +989,36 @@ export function DepositPage() {
               </div>
             )}
 
-            {transaction && transaction.status === "PENDING" && tab === "withdraw" && (
+            {transaction && (transaction.status === "PENDING" || transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis) && tab === "withdraw" && (
                 <div style={{
                   padding: "16px",
-                  background: "rgba(246, 196, 83, 0.1)",
-                  border: "1px solid var(--gold)",
+                  background: transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis 
+                    ? "rgba(255, 193, 7, 0.1)" 
+                    : "rgba(246, 196, 83, 0.1)",
+                  border: `1px solid ${transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis ? "#ffc107" : "var(--gold)"}`,
                   borderRadius: "8px",
                   marginTop: "16px"
                 }}>
-                  <h3 style={{ marginTop: 0, color: "var(--gold)" }}>Saque solicitado com sucesso!</h3>
+                  <h3 style={{ marginTop: 0, color: transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis ? "#ffc107" : "var(--gold)" }}>
+                    {transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis 
+                      ? "Solicitação de saque em análise" 
+                      : "Saque solicitado com sucesso!"}
+                  </h3>
                   <p style={{ color: "var(--text-main)", marginBottom: "8px" }}>
-                    Seu saque de <strong>R$ {transaction.amount.toFixed(2).replace(".", ",")}</strong> foi solicitado e está sendo processado.
+                    {transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis ? (
+                      <>
+                        Seu saque de <strong>R$ {Math.abs(transaction.amount).toFixed(2).replace(".", ",")}</strong> foi enviado para análise.
+                      </>
+                    ) : (
+                      <>
+                        Seu saque de <strong>R$ {Math.abs(transaction.amount).toFixed(2).replace(".", ",")}</strong> foi solicitado e está sendo processado.
+                      </>
+                    )}
                   </p>
                   <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
-                    Status: {transaction.status} | Aguardando processamento...
+                    {transaction.status === "ANALYSIS" || (transaction as any).needsAnalysis 
+                      ? "Você será notificado quando o saque for processado."
+                      : `Status: ${transaction.status} | Aguardando processamento...`}
                   </p>
                 </div>
               )}
