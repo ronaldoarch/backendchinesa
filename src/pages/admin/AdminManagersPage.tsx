@@ -8,6 +8,8 @@ type Manager = {
   phone?: string;
   createdAt: string;
   userType: string;
+  isDemo?: boolean;
+  balance?: number;
 };
 
 export function AdminManagersPage() {
@@ -17,7 +19,9 @@ export function AdminManagersPage() {
     username: "",
     password: "",
     email: "",
-    phone: ""
+    phone: "",
+    isDemo: false,
+    initialBalance: "0"
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
@@ -51,9 +55,12 @@ export function AdminManagersPage() {
     }
 
     try {
-      await api.post("/managers", form);
+      await api.post("/managers", {
+        ...form,
+        initialBalance: form.isDemo ? parseFloat(form.initialBalance) || 0 : 0
+      });
       alert("Gerente criado com sucesso!");
-      setForm({ username: "", password: "", email: "", phone: "" });
+      setForm({ username: "", password: "", email: "", phone: "", isDemo: false, initialBalance: "0" });
       loadManagers();
     } catch (error: any) {
       console.error("Erro ao criar gerente:", error);
@@ -137,6 +144,37 @@ export function AdminManagersPage() {
           value={form.phone}
           onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
         />
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: "12px",
+          padding: "12px",
+          background: "rgba(246, 196, 83, 0.1)",
+          borderRadius: "8px",
+          border: "1px solid rgba(246, 196, 83, 0.3)"
+        }}>
+          <input
+            type="checkbox"
+            id="isDemo"
+            checked={form.isDemo}
+            onChange={(e) => setForm((f) => ({ ...f, isDemo: e.target.checked }))}
+            style={{ width: "20px", height: "20px", cursor: "pointer" }}
+          />
+          <label htmlFor="isDemo" style={{ cursor: "pointer", flex: 1 }}>
+            Conta Demo
+          </label>
+        </div>
+        {form.isDemo && (
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Saldo inicial (R$)"
+            value={form.initialBalance}
+            onChange={(e) => setForm((f) => ({ ...f, initialBalance: e.target.value }))}
+            style={{ marginTop: "8px" }}
+          />
+        )}
         <button className="btn btn-gold" type="submit">
           Criar Gerente
         </button>
@@ -156,6 +194,8 @@ export function AdminManagersPage() {
                 <th>Username</th>
                 <th>Email</th>
                 <th>Telefone</th>
+                <th>Demo</th>
+                <th>Saldo</th>
                 <th>Criado em</th>
                 <th>Ações</th>
               </tr>
@@ -167,6 +207,8 @@ export function AdminManagersPage() {
                   <td>{manager.username}</td>
                   <td>{manager.email || "-"}</td>
                   <td>{manager.phone || "-"}</td>
+                  <td>{manager.isDemo ? "✓ Sim" : "Não"}</td>
+                  <td>R$ {manager.balance?.toFixed(2).replace(".", ",") || "0,00"}</td>
                   <td>{new Date(manager.createdAt).toLocaleDateString("pt-BR")}</td>
                   <td>
                     {editingId === manager.id ? (

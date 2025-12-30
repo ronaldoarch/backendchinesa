@@ -9,7 +9,8 @@ import bcrypt from "bcrypt";
 export async function listManagersController(req: Request, res: Response): Promise<void> {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, username, email, phone, created_at as createdAt, user_type as userType
+      `SELECT id, username, email, phone, created_at as createdAt, user_type as userType, 
+              is_demo as isDemo, balance
        FROM users 
        WHERE user_type = 'manager'
        ORDER BY created_at DESC`
@@ -25,7 +26,7 @@ export async function listManagersController(req: Request, res: Response): Promi
  * Criar novo gerente
  */
 export async function createManagerController(req: Request, res: Response): Promise<void> {
-  const { username, password, email, phone } = req.body;
+  const { username, password, email, phone, isDemo, initialBalance } = req.body;
 
   if (!username || !password) {
     res.status(400).json({ error: "Username e senha são obrigatórios" });
@@ -47,15 +48,19 @@ export async function createManagerController(req: Request, res: Response): Prom
     // Hash da senha
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Determinar saldo inicial
+    const balance = isDemo ? Number(initialBalance || 0) : 0;
+
     // Criar usuário como gerente
     const [result] = await pool.query(
-      `INSERT INTO users (username, password_hash, email, phone, user_type, balance)
-       VALUES (?, ?, ?, ?, 'manager', 0)`,
-      [username, passwordHash, email || null, phone || null]
+      `INSERT INTO users (username, password_hash, email, phone, user_type, balance, is_demo)
+       VALUES (?, ?, ?, ?, 'manager', ?, ?)`,
+      [username, passwordHash, email || null, phone || null, balance, isDemo ? 1 : 0]
     );
 
     const [newManager] = await pool.query<RowDataPacket[]>(
-      `SELECT id, username, email, phone, created_at as createdAt, user_type as userType
+      `SELECT id, username, email, phone, created_at as createdAt, user_type as userType, 
+              is_demo as isDemo, balance
        FROM users WHERE id = ?`,
       [(result as any).insertId]
     );

@@ -424,6 +424,23 @@ export async function initDb() {
         `);
         console.log("✅ Coluna user_type adicionada à tabela users");
       }
+
+      // Verificar se is_demo existe
+      const [demoColumns] = await connection.query<RowDataPacket[]>(
+        `SELECT COLUMN_NAME 
+         FROM INFORMATION_SCHEMA.COLUMNS 
+         WHERE TABLE_SCHEMA = DATABASE() 
+         AND TABLE_NAME = 'users' 
+         AND COLUMN_NAME = 'is_demo'`
+      );
+      
+      if (!demoColumns || demoColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE users 
+          ADD COLUMN is_demo TINYINT(1) DEFAULT 0
+        `);
+        console.log("✅ Coluna is_demo adicionada à tabela users");
+      }
     } catch (error: any) {
       console.warn("⚠️ Aviso ao verificar/adicionar coluna user_type:", error.message);
     }
