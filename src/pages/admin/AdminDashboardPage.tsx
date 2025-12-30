@@ -25,6 +25,7 @@ export function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -50,6 +51,26 @@ export function AdminDashboardPage() {
       setError(err.response?.data?.error || "Erro ao carregar estatísticas");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResetDashboard() {
+    if (!confirm("⚠️ ATENÇÃO: Esta ação irá:\n\n- Deletar TODAS as transações\n- Zerar todos os saldos dos usuários\n- Zerar todos os totais (depósitos, saques, apostas)\n- Deletar histórico de apostas, bônus e recompensas\n\nTem certeza que deseja continuar?")) {
+      return;
+    }
+
+    try {
+      setResetting(true);
+      const response = await api.post("/stats/dashboard/reset");
+      if (response.data.success) {
+        alert("✅ Dashboard zerado com sucesso!");
+        await loadStats(); // Recarregar estatísticas
+      }
+    } catch (err: any) {
+      console.error("Erro ao zerar dashboard:", err);
+      alert(err.response?.data?.error || "Erro ao zerar dashboard");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -112,9 +133,25 @@ export function AdminDashboardPage() {
     <section className="admin-section">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h1>Dashboard</h1>
-        <button className="btn btn-gold" onClick={loadStats} style={{ fontSize: "12px", padding: "6px 12px" }}>
-          Atualizar
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button 
+            className="btn" 
+            onClick={handleResetDashboard} 
+            disabled={resetting}
+            style={{ 
+              fontSize: "12px", 
+              padding: "6px 12px",
+              background: resetting ? "var(--text-muted)" : "#dc2626",
+              color: "#fff",
+              border: "none"
+            }}
+          >
+            {resetting ? "Zerando..." : "🗑️ Zerar Dashboard"}
+          </button>
+          <button className="btn btn-gold" onClick={loadStats} style={{ fontSize: "12px", padding: "6px 12px" }}>
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <div className="admin-dashboard-grid">
