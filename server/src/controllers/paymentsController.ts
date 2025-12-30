@@ -889,7 +889,7 @@ export async function createWithdrawController(req: Request, res: Response): Pro
         paymentMethod: "PIX",
         amount: -amount, // Negativo para saque
         status: "PENDING", // Status PENDING indica que está em análise
-        transactionId: null,
+        transactionId: undefined, // Não há transactionId quando está em análise
         metadata: {
           pixKey: pixKey.trim(),
           type: "withdraw",
