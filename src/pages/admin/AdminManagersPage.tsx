@@ -208,7 +208,7 @@ export function AdminManagersPage() {
                   <td>{manager.email || "-"}</td>
                   <td>{manager.phone || "-"}</td>
                   <td>{manager.isDemo ? "✓ Sim" : "Não"}</td>
-                  <td>R$ {manager.balance?.toFixed(2).replace(".", ",") || "0,00"}</td>
+                  <td>R$ {typeof manager.balance === 'number' ? manager.balance.toFixed(2).replace(".", ",") : "0,00"}</td>
                   <td>{new Date(manager.createdAt).toLocaleDateString("pt-BR")}</td>
                   <td>
                     {editingId === manager.id ? (
