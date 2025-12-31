@@ -44,7 +44,7 @@ app.use(json());
 const isDebug = process.env.NODE_ENV === "development" || process.env.DEBUG === "true";
 app.use((req, res, next) => {
   if (isDebug) {
-    console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
+  console.log(`🌐 [GLOBAL] ${req.method} ${req.originalUrl || req.url}`);
   }
   next();
 });
@@ -123,12 +123,12 @@ try {
 
 // Log antes de montar as rotas (apenas em debug)
 if (isDebug) {
-  console.log("🔧 [SERVER] Montando apiRouter em /api");
+console.log("🔧 [SERVER] Montando apiRouter em /api");
   console.log("🔧 [SERVER] Rotas disponíveis:", [
     "/health", "/auth", "/providers", "/games", "/banners",
     "/promotions", "/settings", "/payments", "/stats",
     "/tracking", "/bonuses", "/uploads", "/playfivers"
-  ]);
+]);
 }
 
 // Middleware que captura TODAS as requisições que começam com /api
@@ -299,12 +299,12 @@ if (distClientExists && distClientPath) {
         </body>
       </html>
     `);
-  });
-  
+});
+
   // 404 para rotas não encontradas (apenas se não for SPA)
-  app.use((_req, res) => {
-    res.status(404).json({ error: "Rota não encontrada" });
-  });
+app.use((_req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
+});
 }
 
 app.use(errorHandler);

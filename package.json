@@ -12,7 +12,7 @@
     "dev:server": "ts-node-dev --respawn --transpile-only server/src/server.ts",
     "build:server": "tsc --project tsconfig.server.json",
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
-    "build": "npm install",
+    "build": "npm run build:client && npm install",
     "start": "npx ts-node server/src/server.ts",
     "reset-admin": "node reset-admin-backend.js",
     "setup": "npm install && echo '\n✅ Dependências instaladas!\n\n📝 Próximos passos:\n1. Configure o arquivo .env com suas credenciais MySQL\n2. Execute: npm run dev\n3. Acesse: http://localhost:5173\n'"
