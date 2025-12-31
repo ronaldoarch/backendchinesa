@@ -1,5 +1,5 @@
 node_modules
-dist-client
+# dist-client - NÃO IGNORAR (precisa ser buildado no Docker)
 .git
 .gitignore
 *.md
