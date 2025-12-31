@@ -15,13 +15,24 @@ RUN npm ci
 COPY . .
 
 # Fazer build do frontend ANTES de remover devDependencies
-RUN npm run build:client
+RUN echo "🔨 Iniciando build do frontend..." && \
+    npm run build:client && \
+    echo "✅ Build do frontend concluído"
 
 # Verificar se o build foi criado e listar conteúdo
 RUN echo "📦 Verificando dist-client após build:" && \
-    ls -la dist-client/ 2>/dev/null || echo "⚠️ dist-client não encontrado após build" && \
-    echo "📦 Conteúdo de dist-client:" && \
-    ls -la dist-client/ 2>/dev/null | head -20 || echo "⚠️ Não foi possível listar dist-client"
+    pwd && \
+    ls -la . && \
+    if [ -d "dist-client" ]; then \
+      echo "✅ dist-client encontrado!" && \
+      ls -la dist-client/ | head -20 && \
+      echo "📄 Verificando index.html:" && \
+      ls -la dist-client/index.html || echo "⚠️ index.html não encontrado"; \
+    else \
+      echo "❌ dist-client NÃO encontrado!" && \
+      echo "📁 Diretórios na raiz:" && \
+      ls -la; \
+    fi
 
 # IMPORTANTE: NÃO executar npm ci --omit=dev pois isso pode remover arquivos
 # As devDependencies já foram instaladas e o build foi feito
