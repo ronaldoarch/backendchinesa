@@ -2,6 +2,7 @@ import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { json } from "express";
+import fs from "fs";
 import { env } from "./config/env";
 import { initDb } from "./config/database";
 import { apiRouter } from "./routes";
@@ -55,7 +56,6 @@ app.use(requestLogger);
 // Se __dirname = /app/server/src, então:
 // .. = /app/server
 // Então precisamos apenas "uploads" (não "server/uploads" novamente)
-const fs = require("fs");
 const uploadsDir = path.resolve(__dirname, "..", "uploads");
 
 try {
@@ -149,22 +149,63 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, status: "healthy" });
 });
 
-// Rota raiz - apenas para API
-app.get("/", (_req, res) => {
-  res.json({ 
-    message: "API Backend H2bet",
-    version: "1.0.0",
-    endpoints: {
-      health: "/health",
-      api: "/api"
+// Servir frontend estático (SPA)
+// Verificar se existe dist-client (build do frontend)
+const distClientPath = path.resolve(__dirname, "..", "..", "dist-client");
+const distClientExists = fs.existsSync(distClientPath);
+
+if (distClientExists) {
+  console.log("✅ [SERVER] Frontend encontrado em:", distClientPath);
+  
+  // Servir arquivos estáticos do frontend
+  app.use(express.static(distClientPath, {
+    maxAge: "1d", // Cache de 1 dia para assets
+    etag: true
+  }));
+  
+  // Para todas as rotas que não são /api, /health, /uploads, servir index.html (SPA routing)
+  app.get("*", (req, res, next) => {
+    // Ignorar rotas da API e outras rotas específicas
+    if (req.path.startsWith("/api") || 
+        req.path.startsWith("/health") || 
+        req.path.startsWith("/uploads")) {
+      return next();
+    }
+    
+    // Servir index.html para todas as outras rotas (SPA)
+    const indexPath = path.join(distClientPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
     }
   });
-});
+  
+  console.log("✅ [SERVER] Frontend configurado para servir na raiz");
+} else {
+  console.warn("⚠️ [SERVER] Frontend não encontrado em:", distClientPath);
+  console.warn("⚠️ [SERVER] Certifique-se de que o build do frontend foi executado (npm run build:client)");
+  
+  // Fallback: retornar mensagem da API apenas se frontend não existir
+  app.get("/", (_req, res) => {
+    res.json({ 
+      message: "API Backend H2bet",
+      version: "1.0.0",
+      endpoints: {
+        health: "/health",
+        api: "/api"
+      },
+      warning: "Frontend não encontrado. Execute 'npm run build:client' para gerar o build."
+    });
+  });
+}
 
-// 404 para rotas não encontradas
-app.use((_req, res) => {
-  res.status(404).json({ error: "Rota não encontrada" });
-});
+// 404 para rotas não encontradas (apenas se não for SPA)
+if (!distClientExists) {
+  app.use((_req, res) => {
+    res.status(404).json({ error: "Rota não encontrada" });
+  });
+}
 
 app.use(errorHandler);
 
