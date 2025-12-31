@@ -166,16 +166,34 @@ for (const possiblePath of possiblePaths) {
   if (fs.existsSync(possiblePath)) {
     distClientPath = possiblePath;
     distClientExists = true;
+    console.log("=".repeat(60));
     console.log(`✅ [SERVER] Frontend encontrado em: ${distClientPath}`);
+    console.log(`✅ [SERVER] __dirname: ${__dirname}`);
+    console.log(`✅ [SERVER] process.cwd(): ${process.cwd()}`);
+    
+    // Verificar se index.html existe
+    const indexPath = path.join(distClientPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      console.log(`✅ [SERVER] index.html encontrado: ${indexPath}`);
+    } else {
+      console.warn(`⚠️ [SERVER] index.html NÃO encontrado em: ${indexPath}`);
+    }
+    console.log("=".repeat(60));
     break;
   }
 }
 
 if (!distClientExists) {
-  console.warn("⚠️ [SERVER] Frontend não encontrado. Caminhos testados:");
-  possiblePaths.forEach(p => console.warn(`   - ${p} (existe: ${fs.existsSync(p)})`));
-  console.warn(`   - __dirname: ${__dirname}`);
-  console.warn(`   - process.cwd(): ${process.cwd()}`);
+  console.error("=".repeat(60));
+  console.error("⚠️ [SERVER] Frontend NÃO encontrado!");
+  console.error("⚠️ [SERVER] Caminhos testados:");
+  possiblePaths.forEach(p => {
+    const exists = fs.existsSync(p);
+    console.error(`   ${exists ? "✅" : "❌"} ${p}`);
+  });
+  console.error(`   - __dirname: ${__dirname}`);
+  console.error(`   - process.cwd(): ${process.cwd()}`);
+  console.error("=".repeat(60));
 }
 
 if (distClientExists && distClientPath) {
