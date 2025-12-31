@@ -118,7 +118,7 @@ export async function launchGameController(req: Request, res: Response): Promise
   
   console.log("🎮 [LAUNCH GAME] Usuário tentando lançar jogo:", { userId, gameId: id });
   
-  // Buscar dados completos do usuário no banco (incluindo saldo)
+  // Buscar dados completos do usuário no banco (incluindo saldo) - SEMPRE buscar do banco para ter o saldo mais atualizado
   const user = await findUserById(userId);
   if (!user) {
     console.error("❌ [LAUNCH GAME] Usuário não encontrado:", userId);
@@ -126,9 +126,24 @@ export async function launchGameController(req: Request, res: Response): Promise
     return;
   }
 
-  // Validar saldo: usuário precisa ter saldo > 0 para jogar
-  const userBalance = Number(user.balance || 0);
-  console.log("💰 [LAUNCH GAME] Saldo do usuário:", { userId, username: user.username, balance: userBalance });
+  // Buscar saldo DIRETO do banco para garantir que está atualizado
+  const { pool } = await import("../config/database");
+  const [balanceRows] = await pool.query<any[]>(
+    "SELECT balance FROM users WHERE id = ?",
+    [userId]
+  );
+  
+  const userBalance = balanceRows && balanceRows.length > 0 
+    ? Number(balanceRows[0].balance || 0) 
+    : Number(user.balance || 0);
+    
+  console.log("💰 [LAUNCH GAME] Saldo do usuário (buscado do banco):", { 
+    userId, 
+    username: user.username, 
+    balance: userBalance,
+    balanceFromUser: Number(user.balance || 0),
+    balanceFromDB: balanceRows && balanceRows.length > 0 ? Number(balanceRows[0].balance || 0) : null
+  });
   
   if (userBalance <= 0) {
     console.warn("⚠️ [LAUNCH GAME] Saldo insuficiente:", { userId, balance: userBalance });
