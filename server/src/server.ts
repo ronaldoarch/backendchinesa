@@ -152,7 +152,7 @@ app.get("/health", (_req, res) => {
 // Rota raiz - apenas para API
 app.get("/", (_req, res) => {
   res.json({ 
-    message: "API Backend BigBet777",
+    message: "API Backend H2bet",
     version: "1.0.0",
     endpoints: {
       health: "/health",
