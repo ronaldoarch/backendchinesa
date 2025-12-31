@@ -157,17 +157,20 @@ const distClientExists = fs.existsSync(distClientPath);
 if (distClientExists) {
   console.log("✅ [SERVER] Frontend encontrado em:", distClientPath);
   
-  // Servir arquivos estáticos do frontend
+  // Servir arquivos estáticos do frontend (CSS, JS, imagens, etc)
   app.use(express.static(distClientPath, {
     maxAge: "1d", // Cache de 1 dia para assets
-    etag: true
+    etag: true,
+    // Não servir index.html aqui, apenas assets
+    index: false
   }));
   
-  // Para todas as rotas que não são /api, /health, /uploads, servir index.html (SPA routing)
+  // Para todas as rotas GET que não são /api, /health, /uploads, servir index.html (SPA routing)
+  // IMPORTANTE: Esta rota deve ser a ÚLTIMA, depois de todas as outras
   app.get("*", (req, res, next) => {
     // Ignorar rotas da API e outras rotas específicas
     if (req.path.startsWith("/api") || 
-        req.path.startsWith("/health") || 
+        req.path === "/health" || 
         req.path.startsWith("/uploads")) {
       return next();
     }
@@ -198,10 +201,8 @@ if (distClientExists) {
       warning: "Frontend não encontrado. Execute 'npm run build:client' para gerar o build."
     });
   });
-}
-
-// 404 para rotas não encontradas (apenas se não for SPA)
-if (!distClientExists) {
+  
+  // 404 para rotas não encontradas (apenas se não for SPA)
   app.use((_req, res) => {
     res.status(404).json({ error: "Rota não encontrada" });
   });
