@@ -151,12 +151,34 @@ app.get("/health", (_req, res) => {
 
 // Servir frontend estático (SPA)
 // Verificar se existe dist-client (build do frontend)
-const distClientPath = path.resolve(__dirname, "..", "..", "dist-client");
-const distClientExists = fs.existsSync(distClientPath);
+// Tentar múltiplos caminhos possíveis (desenvolvimento e produção)
+const possiblePaths = [
+  path.resolve(__dirname, "..", "..", "dist-client"), // Desenvolvimento: server/src -> server -> raiz -> dist-client
+  path.resolve(__dirname, "..", "dist-client"), // Se compilado: dist-server -> raiz -> dist-client
+  path.resolve(process.cwd(), "dist-client"), // Caminho absoluto baseado no diretório de trabalho
+  path.join(__dirname, "..", "..", "..", "dist-client") // Alternativa
+];
 
-if (distClientExists) {
-  console.log("✅ [SERVER] Frontend encontrado em:", distClientPath);
-  
+let distClientPath: string | null = null;
+let distClientExists = false;
+
+for (const possiblePath of possiblePaths) {
+  if (fs.existsSync(possiblePath)) {
+    distClientPath = possiblePath;
+    distClientExists = true;
+    console.log(`✅ [SERVER] Frontend encontrado em: ${distClientPath}`);
+    break;
+  }
+}
+
+if (!distClientExists) {
+  console.warn("⚠️ [SERVER] Frontend não encontrado. Caminhos testados:");
+  possiblePaths.forEach(p => console.warn(`   - ${p} (existe: ${fs.existsSync(p)})`));
+  console.warn(`   - __dirname: ${__dirname}`);
+  console.warn(`   - process.cwd(): ${process.cwd()}`);
+}
+
+if (distClientExists && distClientPath) {
   // Servir arquivos estáticos do frontend (CSS, JS, imagens, etc)
   app.use(express.static(distClientPath, {
     maxAge: "1d", // Cache de 1 dia para assets
@@ -176,10 +198,11 @@ if (distClientExists) {
     }
     
     // Servir index.html para todas as outras rotas (SPA)
-    const indexPath = path.join(distClientPath, "index.html");
+    const indexPath = path.join(distClientPath!, "index.html");
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
+      console.warn(`⚠️ [SERVER] index.html não encontrado em: ${indexPath}`);
       next();
     }
   });

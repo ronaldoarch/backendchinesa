@@ -8,11 +8,17 @@ RUN apk add --no-cache python3 make g++
 # Copiar arquivos de dependências
 COPY package.json package-lock.json ./
 
-# Instalar dependências
-RUN npm ci --omit=dev
+# Instalar TODAS as dependências (incluindo devDependencies para build do frontend)
+RUN npm ci
 
-# Copiar código (usando .dockerignore para excluir arquivos desnecessários)
+# Copiar código fonte
 COPY . .
+
+# Fazer build do frontend
+RUN npm run build:client
+
+# Instalar apenas dependências de produção (após o build)
+RUN npm ci --omit=dev
 
 # Criar diretório de uploads
 RUN mkdir -p server/uploads
