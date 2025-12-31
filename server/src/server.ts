@@ -149,6 +149,9 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, status: "healthy" });
 });
 
+// IMPORTANTE: NÃO definir rota raiz "/" aqui
+// A rota raiz será servida pelo frontend (SPA) para que links de afiliados/gerentes funcionem
+
 // Servir frontend estático (SPA)
 // Verificar se existe dist-client (build do frontend)
 // Tentar múltiplos caminhos possíveis (desenvolvimento e produção)
