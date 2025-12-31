@@ -218,29 +218,82 @@ if (distClientExists && distClientPath) {
     // Servir index.html para todas as outras rotas (SPA)
     const indexPath = path.join(distClientPath!, "index.html");
     if (fs.existsSync(indexPath)) {
+      // Log apenas em debug para não poluir logs
+      if (isDebug) {
+        console.log(`📄 [SPA] Servindo index.html para: ${req.path}`);
+      }
       res.sendFile(indexPath);
     } else {
-      console.warn(`⚠️ [SERVER] index.html não encontrado em: ${indexPath}`);
-      next();
+      console.error(`❌ [SERVER] index.html não encontrado em: ${indexPath}`);
+      // Se index.html não existe, retornar erro 500 em vez de JSON
+      res.status(500).send(`
+        <html>
+          <head><title>Erro - Frontend não encontrado</title></head>
+          <body style="font-family: Arial; padding: 20px; background: #1a1a1a; color: #fff;">
+            <h1>Erro: Frontend não encontrado</h1>
+            <p>O arquivo index.html não foi encontrado em: ${indexPath}</p>
+            <p>Verifique se o build do frontend foi executado corretamente.</p>
+          </body>
+        </html>
+      `);
     }
   });
   
   console.log("✅ [SERVER] Frontend configurado para servir na raiz");
 } else {
-  console.warn("⚠️ [SERVER] Frontend não encontrado em:", distClientPath);
-  console.warn("⚠️ [SERVER] Certifique-se de que o build do frontend foi executado (npm run build:client)");
+  console.error("=".repeat(60));
+  console.error("❌ [SERVER] Frontend NÃO encontrado!");
+  console.error("❌ [SERVER] Certifique-se de que o build do frontend foi executado (npm run build:client)");
+  console.error("=".repeat(60));
   
-  // Fallback: retornar mensagem da API apenas se frontend não existir
+  // Fallback: retornar mensagem HTML em vez de JSON para facilitar debug
   app.get("/", (_req, res) => {
-    res.json({ 
-      message: "API Backend H2bet",
-      version: "1.0.0",
-      endpoints: {
-        health: "/health",
-        api: "/api"
-      },
-      warning: "Frontend não encontrado. Execute 'npm run build:client' para gerar o build."
-    });
+    res.status(503).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Frontend não encontrado</title>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              background: #1a1a1a;
+              color: #fff;
+              padding: 40px;
+              max-width: 800px;
+              margin: 0 auto;
+            }
+            h1 { color: #ff6b6b; }
+            code { background: #2d2d2d; padding: 2px 6px; border-radius: 3px; }
+            .warning { background: #ff6b6b20; border-left: 4px solid #ff6b6b; padding: 15px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>⚠️ Frontend não encontrado</h1>
+          <div class="warning">
+            <p><strong>O frontend não foi encontrado no servidor.</strong></p>
+            <p>Execute <code>npm run build:client</code> para gerar o build do frontend.</p>
+          </div>
+          <h2>Informações da API:</h2>
+          <ul>
+            <li><strong>Mensagem:</strong> API Backend H2bet</li>
+            <li><strong>Versão:</strong> 1.0.0</li>
+            <li><strong>Endpoints:</strong>
+              <ul>
+                <li><code>/health</code> - Health check</li>
+                <li><code>/api</code> - API principal</li>
+              </ul>
+            </li>
+          </ul>
+          <h2>Caminhos testados:</h2>
+          <ul>
+            ${possiblePaths.map(p => `<li><code>${p}</code> ${fs.existsSync(p) ? '✅' : '❌'}</li>`).join('\n')}
+          </ul>
+          <p><strong>__dirname:</strong> <code>${__dirname}</code></p>
+          <p><strong>process.cwd():</strong> <code>${process.cwd()}</code></p>
+        </body>
+      </html>
+    `);
   });
   
   // 404 para rotas não encontradas (apenas se não for SPA)
