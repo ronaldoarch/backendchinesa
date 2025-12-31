@@ -164,6 +164,12 @@ export function AdminDepositsPage() {
     );
   };
 
+  const formatAmount = (amount: number | string): string => {
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return "0,00";
+    return numAmount.toFixed(2).replace(".", ",");
+  };
+
   if (loading) {
     return (
       <section className="admin-section">
@@ -256,7 +262,7 @@ export function AdminDepositsPage() {
               }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>
-                    {t.user?.username || `Usuário #${t.userId}`} - R$ {Math.abs(t.amount).toFixed(2).replace(".", ",")}
+                    {t.user?.username || `Usuário #${t.userId}`} - R$ {formatAmount(Math.abs(Number(t.amount)))}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
                     {t.metadata?.pixKey && `PIX: ${t.metadata.pixKey}`}
@@ -353,7 +359,7 @@ export function AdminDepositsPage() {
                   <td>{t.id}</td>
                   <td>{t.user?.username || `Usuário #${t.userId}`}</td>
                   <td>{getMethodLabel(t.paymentMethod)}</td>
-                  <td style={{ color: "#4ade80" }}>+ R$ {t.amount.toFixed(2).replace(".", ",")}</td>
+                  <td style={{ color: "#4ade80" }}>+ R$ {formatAmount(t.amount)}</td>
                   <td>
                     <span
                       style={{
@@ -399,7 +405,7 @@ export function AdminDepositsPage() {
                   <td style={{ fontSize: "12px" }}>
                     {t.metadata?.pixKey || "-"}
                   </td>
-                  <td style={{ color: "#ef4444" }}>- R$ {Math.abs(t.amount).toFixed(2).replace(".", ",")}</td>
+                  <td style={{ color: "#ef4444" }}>- R$ {formatAmount(Math.abs(Number(t.amount)))}</td>
                   <td>
                     <span
                       style={{
