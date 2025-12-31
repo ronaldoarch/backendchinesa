@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, NavLink, useLocation } from "react-router-dom";
+import { Routes, Route, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
 import { AdminPage } from "./pages/AdminPage";
 import { ManagerPage } from "./pages/ManagerPage";
@@ -27,6 +27,7 @@ export function App() {
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
   const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith("/admin");
 
   // Atualizar usuário quando a rota mudar (para verificar admin)
@@ -137,6 +138,24 @@ export function App() {
       }
     }
   }, [authOpen]);
+
+  // Processar rota /register com parâmetro ref (para links de afiliados e gerentes)
+  useEffect(() => {
+    if (location.pathname === "/register") {
+      const urlParams = new URLSearchParams(location.search);
+      const ref = urlParams.get("ref");
+      
+      // Se não estiver logado, abrir modal de registro com o código de referência
+      if (!user) {
+        setAuthMode("register");
+        setAuthOpen(true);
+        // O AuthModal já captura o ref da URL automaticamente
+      } else {
+        // Se já estiver logado, redirecionar para home
+        navigate("/");
+      }
+    }
+  }, [location.pathname, location.search, user, navigate]);
 
   // Atualizar saldo quando a rota mudar (após depósitos, etc)
   useEffect(() => {
@@ -300,6 +319,8 @@ export function App() {
         ) : (
           <Routes>
             <Route path="/" element={<HomePage />} />
+            {/* Rota /register para links de afiliados e gerentes - redireciona para home com modal aberto */}
+            <Route path="/register" element={<HomePage />} />
             <Route
               path="/promocoes"
               element={
