@@ -155,10 +155,12 @@ app.get("/health", (_req, res) => {
 // Servir frontend estático (SPA)
 // Verificar se existe dist-client (build do frontend)
 // Tentar múltiplos caminhos possíveis (desenvolvimento e produção)
+const cwd = process.cwd();
 const possiblePaths = [
+  path.resolve(cwd, "dist-client"), // Produção Docker: /app/dist-client
   path.resolve(__dirname, "..", "..", "dist-client"), // Desenvolvimento: server/src -> server -> raiz -> dist-client
   path.resolve(__dirname, "..", "dist-client"), // Se compilado: dist-server -> raiz -> dist-client
-  path.resolve(process.cwd(), "dist-client"), // Caminho absoluto baseado no diretório de trabalho
+  path.join(cwd, "dist-client"), // Alternativa com join
   path.join(__dirname, "..", "..", "..", "dist-client") // Alternativa
 ];
 

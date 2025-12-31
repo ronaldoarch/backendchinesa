@@ -14,11 +14,17 @@ RUN npm ci
 # Copiar código fonte
 COPY . .
 
-# Fazer build do frontend
+# Fazer build do frontend ANTES de remover devDependencies
 RUN npm run build:client
+
+# Verificar se o build foi criado
+RUN ls -la dist-client/ || echo "⚠️ dist-client não encontrado após build"
 
 # Instalar apenas dependências de produção (após o build)
 RUN npm ci --omit=dev
+
+# Verificar novamente se dist-client existe após npm ci
+RUN ls -la dist-client/ || echo "⚠️ dist-client não encontrado após npm ci"
 
 # Criar diretório de uploads
 RUN mkdir -p server/uploads
