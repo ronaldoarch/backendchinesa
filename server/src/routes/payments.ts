@@ -6,9 +6,12 @@ import {
   createWithdrawController,
   webhookController,
   listTransactionsController,
+  listAllTransactionsController,
   getTransactionController,
   cancelTransactionController,
-  testConnectionController
+  testConnectionController,
+  approveWithdrawController,
+  rejectWithdrawController
 } from "../controllers/paymentsController";
 import { getReportsController } from "../controllers/reportsController";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -39,8 +42,11 @@ paymentsRouter.post("/card", authenticate, asyncHandler(createCardPaymentControl
 paymentsRouter.post("/boleto", authenticate, asyncHandler(createBoletoPaymentController));
 paymentsRouter.post("/withdraw", authenticate, asyncHandler(createWithdrawController));
 paymentsRouter.get("/transactions", authenticate, asyncHandler(listTransactionsController));
+paymentsRouter.get("/admin/transactions", authenticate, requireAdmin, asyncHandler(listAllTransactionsController));
 paymentsRouter.get("/transactions/:requestNumber", authenticate, asyncHandler(getTransactionController));
 paymentsRouter.post("/transactions/:requestNumber/cancel", authenticate, asyncHandler(cancelTransactionController));
+paymentsRouter.post("/admin/withdraws/:id/approve", authenticate, requireAdmin, asyncHandler(approveWithdrawController));
+paymentsRouter.post("/admin/withdraws/:id/reject", authenticate, requireAdmin, asyncHandler(rejectWithdrawController));
 paymentsRouter.get("/reports", authenticate, asyncHandler(getReportsController));
 paymentsRouter.post("/test-connection", authenticate, requireAdmin, asyncHandler(testConnectionController));
 

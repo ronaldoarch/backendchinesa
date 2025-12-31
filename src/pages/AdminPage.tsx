@@ -81,7 +81,7 @@ export function AdminPage() {
             }
             onClick={() => setMenuOpen(false)}
           >
-            Depósitos
+            Depósitos e Saques
           </NavLink>
           <NavLink
             to="/admin/promocoes"

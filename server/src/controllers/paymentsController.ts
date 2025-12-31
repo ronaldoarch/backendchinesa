@@ -748,6 +748,141 @@ export async function listTransactionsController(req: Request, res: Response): P
   }
 }
 
+export async function listAllTransactionsController(req: Request, res: Response): Promise<void> {
+  try {
+    const authReq = req as any;
+    const { listAllTransactions } = await import("../services/transactionsService");
+    const transactions = await listAllTransactions();
+    res.json(transactions);
+  } catch (error: any) {
+    console.error("Erro ao listar todas as transações:", error);
+    res.status(500).json({ error: error.message || "Erro ao listar transações" });
+  }
+}
+
+export async function approveWithdrawController(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { requestNumber } = req.body;
+    const { findTransactionByRequestNumber, updateTransactionStatus, updateUserBalance } = await import("../services/transactionsService");
+    const suitpayServiceModule = await import("../services/suitpayService");
+    const suitpayService = suitpayServiceModule.suitpayService;
+    const { env } = await import("../config/env");
+
+    // Buscar transação
+    const transaction = await findTransactionByRequestNumber(requestNumber);
+    if (!transaction) {
+      res.status(404).json({ error: "Transação não encontrada" });
+      return;
+    }
+
+    if (transaction.status !== "PENDING" && transaction.status !== "ANALYSIS") {
+      res.status(400).json({ error: "Transação não está pendente de aprovação" });
+      return;
+    }
+
+    const amount = Math.abs(transaction.amount);
+    const metadata = typeof transaction.metadata === "string" 
+      ? JSON.parse(transaction.metadata) 
+      : transaction.metadata || {};
+    const pixKey = metadata.pixKey;
+
+    if (!pixKey) {
+      res.status(400).json({ error: "Chave PIX não encontrada na transação" });
+      return;
+    }
+
+    // Tentar criar saque via SuitPay
+    const backendBaseUrl = env.backendUrl;
+    const callbackUrl = `${backendBaseUrl}/api/payments/webhook`;
+    
+    const withdrawResult = await suitpayService.createPixWithdraw({
+      requestNumber: transaction.requestNumber,
+      amount,
+      pixKey: pixKey.trim(),
+      callbackUrl
+    });
+
+    if (withdrawResult.success && withdrawResult.data) {
+      // Atualizar transação como COMPLETED
+      await updateTransactionStatus(
+        transaction.requestNumber,
+        "COMPLETED",
+        withdrawResult.data.transactionId,
+        { approvedBy: "admin", approvedAt: new Date().toISOString() }
+      );
+
+      // Descontar saldo do usuário
+      await updateUserBalance(transaction.userId, -amount);
+
+      // Atualizar total de saques
+      await pool.query(
+        `UPDATE users 
+         SET total_withdrawal_amount = COALESCE(total_withdrawal_amount, 0) + ?,
+             last_withdrawal_at = NOW()
+         WHERE id = ?`,
+        [amount, transaction.userId]
+      );
+
+      res.json({
+        success: true,
+        message: "Saque aprovado e processado com sucesso"
+      });
+    } else {
+      // Se ainda não tiver saldo, manter como PENDING
+      res.status(400).json({
+        error: "Não foi possível processar o saque",
+        message: withdrawResult.message || "Erro ao processar saque na SuitPay"
+      });
+    }
+  } catch (error: any) {
+    console.error("Erro ao aprovar saque:", error);
+    res.status(500).json({ error: error.message || "Erro ao aprovar saque" });
+  }
+}
+
+export async function rejectWithdrawController(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { requestNumber, reason } = req.body;
+    const { findTransactionByRequestNumber, updateTransactionStatus } = await import("../services/transactionsService");
+
+    // Buscar transação
+    const transaction = await findTransactionByRequestNumber(requestNumber);
+    if (!transaction) {
+      res.status(404).json({ error: "Transação não encontrada" });
+      return;
+    }
+
+    if (transaction.status !== "PENDING" && transaction.status !== "ANALYSIS") {
+      res.status(400).json({ error: "Transação não está pendente de aprovação" });
+      return;
+    }
+
+    // Atualizar como CANCELED
+    await updateTransactionStatus(
+      transaction.requestNumber,
+      "CANCELED",
+      undefined,
+      {
+        rejectedBy: "admin",
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: reason || "Rejeitado pelo administrador"
+      }
+    );
+
+    // NÃO descontar saldo (já que não foi descontado antes)
+
+    res.json({
+      success: true,
+      message: "Saque rejeitado com sucesso"
+    });
+  } catch (error: any) {
+    console.error("Erro ao rejeitar saque:", error);
+    res.status(500).json({ error: error.message || "Erro ao rejeitar saque" });
+  }
+}
+
 export async function getTransactionController(req: Request, res: Response): Promise<void> {
   try {
     const authReq = req as any;
@@ -852,6 +987,14 @@ export async function createWithdrawController(req: Request, res: Response): Pro
 
     const { amount, pixKey } = parsed.data;
 
+    // Buscar limite máximo de saque configurado
+    const [settingsRows] = await pool.query<RowDataPacket[]>(
+      "SELECT value FROM settings WHERE `key` = 'withdraw.maxLimit'"
+    );
+    const maxWithdrawLimit = settingsRows && settingsRows.length > 0 
+      ? Number(settingsRows[0].value || 10000) 
+      : 10000; // Default: R$ 10.000
+
     // Buscar saldo e totais do usuário
     const [userRows] = await pool.query<RowDataPacket[]>(
       `SELECT balance, bonus_balance, 
@@ -891,6 +1034,43 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       return;
     }
 
+    // Verificar se ultrapassa o limite máximo configurado
+    if (amount > maxWithdrawLimit) {
+      // Enviar para análise se ultrapassar o limite
+      const requestNumber = uuidv4();
+      const transaction = await createTransaction({
+        userId,
+        requestNumber,
+        paymentMethod: "WITHDRAW",
+        amount: -amount,
+        status: "PENDING",
+        transactionId: undefined,
+        metadata: {
+          pixKey: pixKey.trim(),
+          type: "withdraw",
+          needsAnalysis: true,
+          reason: `Valor (R$ ${amount.toFixed(2)}) ultrapassa o limite máximo configurado (R$ ${maxWithdrawLimit.toFixed(2)})`
+        }
+      });
+
+      console.log(`📋 Saque enviado para análise: usuário ${userId}, valor R$ ${amount}, requestNumber: ${requestNumber} (Ultrapassa limite máximo)`);
+
+      res.json({
+        success: true,
+        transaction: {
+          id: transaction.id,
+          requestNumber: transaction.requestNumber,
+          transactionId: transaction.transactionId,
+          paymentMethod: transaction.paymentMethod,
+          amount: Math.abs(transaction.amount),
+          status: "ANALYSIS",
+          needsAnalysis: true
+        },
+        message: "Solicitação de saque enviada para análise (valor ultrapassa o limite máximo)"
+      });
+      return;
+    }
+
     // Gerar número único da requisição
     const requestNumber = uuidv4();
 
@@ -925,7 +1105,7 @@ export async function createWithdrawController(req: Request, res: Response): Pro
       const transaction = await createTransaction({
         userId,
         requestNumber,
-        paymentMethod: "PIX",
+        paymentMethod: "WITHDRAW",
         amount: -amount, // Negativo para saque
         status: "PENDING", // Status PENDING indica que está em análise
         transactionId: undefined, // Não há transactionId quando está em análise
@@ -975,7 +1155,7 @@ export async function createWithdrawController(req: Request, res: Response): Pro
     const transaction = await createTransaction({
       userId,
       requestNumber,
-      paymentMethod: "PIX",
+      paymentMethod: "WITHDRAW",
       amount: -amount, // Negativo para saque
       status: withdrawResult.data.status || "PENDING",
       transactionId: withdrawResult.data.transactionId,

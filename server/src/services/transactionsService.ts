@@ -192,6 +192,74 @@ export async function listUserTransactions(userId: number): Promise<Transaction[
   });
 }
 
+export async function listAllTransactions(): Promise<(Transaction & { user?: { id: number; username: string } })[]> {
+  const [rows] = await pool.query(
+    `SELECT 
+      t.id,
+      t.user_id as userId,
+      t.request_number as requestNumber,
+      t.transaction_id as transactionId,
+      t.payment_method as paymentMethod,
+      t.amount,
+      t.status,
+      t.qr_code as qrCode,
+      t.qr_code_base64 as qrCodeBase64,
+      t.barcode,
+      t.digitable_line as digitableLine,
+      t.due_date as dueDate,
+      t.callback_url as callbackUrl,
+      t.metadata,
+      t.created_at as createdAt,
+      t.updated_at as updatedAt,
+      u.id as user_id,
+      u.username as user_username
+    FROM transactions t
+    LEFT JOIN users u ON t.user_id = u.id
+    ORDER BY t.created_at DESC
+    LIMIT 1000`
+  );
+
+  // Parse metadata para cada transação
+  return (rows as any[]).map((row) => {
+    const transaction: any = {
+      id: row.id,
+      userId: row.userId,
+      requestNumber: row.requestNumber,
+      transactionId: row.transactionId,
+      paymentMethod: row.paymentMethod,
+      amount: row.amount,
+      status: row.status,
+      qrCode: row.qrCode,
+      qrCodeBase64: row.qrCodeBase64,
+      barcode: row.barcode,
+      digitableLine: row.digitableLine,
+      dueDate: row.dueDate,
+      callbackUrl: row.callbackUrl,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
+    };
+
+    if (row.metadata && typeof row.metadata === "string") {
+      try {
+        transaction.metadata = JSON.parse(row.metadata);
+      } catch {
+        transaction.metadata = {};
+      }
+    } else {
+      transaction.metadata = row.metadata || {};
+    }
+
+    if (row.user_id && row.user_username) {
+      transaction.user = {
+        id: row.user_id,
+        username: row.user_username
+      };
+    }
+
+    return transaction as Transaction & { user?: { id: number; username: string } };
+  });
+}
+
 export async function updateUserBalance(userId: number, amount: number): Promise<void> {
   await pool.query(
     `UPDATE users SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
