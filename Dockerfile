@@ -17,14 +17,15 @@ COPY . .
 # Fazer build do frontend ANTES de remover devDependencies
 RUN npm run build:client
 
-# Verificar se o build foi criado
-RUN ls -la dist-client/ || echo "⚠️ dist-client não encontrado após build"
+# Verificar se o build foi criado e listar conteúdo
+RUN echo "📦 Verificando dist-client após build:" && \
+    ls -la dist-client/ 2>/dev/null || echo "⚠️ dist-client não encontrado após build" && \
+    echo "📦 Conteúdo de dist-client:" && \
+    ls -la dist-client/ 2>/dev/null | head -20 || echo "⚠️ Não foi possível listar dist-client"
 
-# Instalar apenas dependências de produção (após o build)
-RUN npm ci --omit=dev
-
-# Verificar novamente se dist-client existe após npm ci
-RUN ls -la dist-client/ || echo "⚠️ dist-client não encontrado após npm ci"
+# IMPORTANTE: NÃO executar npm ci --omit=dev pois isso pode remover arquivos
+# As devDependencies já foram instaladas e o build foi feito
+# Manter tudo como está para produção
 
 # Criar diretório de uploads
 RUN mkdir -p server/uploads
