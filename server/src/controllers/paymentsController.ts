@@ -593,6 +593,32 @@ export async function webhookController(req: Request, res: Response): Promise<vo
     // Se pagamento foi aprovado (PAID_OUT), atualizar saldo do usuário
     // Status possíveis: PAID_OUT (pago), CANCELED (cancelado), CHARGEBACK (estorno)
     if (status === "PAID_OUT" && transaction.status !== "PAID_OUT") {
+      // Rastrear depósito para comissões de afiliados (se o usuário foi indicado por afiliado)
+      try {
+        const [affiliateRefs] = await pool.query<RowDataPacket[]>(
+          `SELECT ar.affiliate_id, a.manager_id 
+           FROM affiliate_referrals ar
+           INNER JOIN affiliates a ON ar.affiliate_id = a.id
+           WHERE ar.referred_user_id = ? AND a.active = true
+           LIMIT 1`,
+          [transaction.userId]
+        );
+        
+        if (affiliateRefs && affiliateRefs.length > 0) {
+          const affiliateId = affiliateRefs[0].affiliate_id;
+          const managerId = affiliateRefs[0].manager_id;
+          const depositAmount = Math.abs(transaction.amount);
+          
+          console.log(`💰 [COMMISSION] Depósito de R$ ${depositAmount} rastreado para afiliado ${affiliateId} e gerente ${managerId}`);
+          
+          // O cálculo de comissões será feito semanalmente pelo sistema de comissões
+          // baseado em apostas e ganhos, não em depósitos
+          // Mas podemos registrar o depósito para estatísticas
+        }
+      } catch (error: any) {
+        console.error("⚠️ Erro ao rastrear depósito para comissões (não crítico):", error.message);
+        // Não bloquear o processamento do pagamento se houver erro
+      }
       // Validar que userId existe
       if (!transaction.userId) {
         console.error("❌ [WEBHOOK] Transação sem userId, não é possível atualizar saldo:", {

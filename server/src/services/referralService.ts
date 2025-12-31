@@ -75,44 +75,76 @@ export async function getReferralLink(userId: number, baseUrl: string): Promise<
 
 /**
  * Registra uma referência quando um novo usuário se cadastra
+ * Verifica tanto códigos de usuários normais quanto códigos de afiliados
  */
 export async function registerReferral(referredUserId: number, referralCode: string): Promise<boolean> {
   try {
-    // Buscar usuário que fez a indicação
+    const code = referralCode.toUpperCase();
+    
+    // PRIMEIRO: Verificar se é código de afiliado
+    const [affiliateRows] = await pool.query<any[]>(
+      "SELECT id, manager_id FROM affiliates WHERE code = ? AND active = true",
+      [code]
+    );
+    
+    if (affiliateRows && affiliateRows.length > 0) {
+      // É código de afiliado - registrar em affiliate_referrals
+      const affiliateId = affiliateRows[0].id;
+      
+      // Verificar se já foi referenciado
+      const [existing] = await pool.query<any[]>(
+        "SELECT id FROM affiliate_referrals WHERE affiliate_id = ? AND referred_user_id = ?",
+        [affiliateId, referredUserId]
+      );
+      
+      if (!existing || existing.length === 0) {
+        await pool.query(
+          "INSERT INTO affiliate_referrals (affiliate_id, referred_user_id) VALUES (?, ?)",
+          [affiliateId, referredUserId]
+        );
+        console.log(`✅ [AFFILIATE] Referência de afiliado registrada: usuário ${referredUserId} foi indicado pelo afiliado ${affiliateId}`);
+      }
+      
+      return true;
+    }
+    
+    // SEGUNDO: Verificar se é código de usuário normal (referral_code)
     const [referrerRows] = await pool.query<any[]>(
       "SELECT id FROM users WHERE referral_code = ?",
-      [referralCode.toUpperCase()]
+      [code]
     );
     
-    if (!referrerRows || referrerRows.length === 0) {
-      return false;
-    }
-    
-    const referrerId = referrerRows[0].id;
-    
-    // Atualizar referred_by do novo usuário
-    await pool.query(
-      "UPDATE users SET referred_by = ? WHERE id = ?",
-      [referrerId, referredUserId]
-    );
-    
-    // Criar registro de tracking de apostas (se não existir)
-    const [existing] = await pool.query<any[]>(
-      `SELECT id FROM referral_bets 
-       WHERE referred_user_id = ? AND referrer_user_id = ?`,
-      [referredUserId, referrerId]
-    );
-    
-    if (!existing || existing.length === 0) {
+    if (referrerRows && referrerRows.length > 0) {
+      const referrerId = referrerRows[0].id;
+      
+      // Atualizar referred_by do novo usuário
       await pool.query(
-        `INSERT INTO referral_bets (referred_user_id, referrer_user_id, bet_amount, total_bet_amount, bonus_credited)
-         VALUES (?, ?, 0, 0, false)`,
+        "UPDATE users SET referred_by = ? WHERE id = ?",
+        [referrerId, referredUserId]
+      );
+      
+      // Criar registro de tracking de apostas (se não existir)
+      const [existing] = await pool.query<any[]>(
+        `SELECT id FROM referral_bets 
+         WHERE referred_user_id = ? AND referrer_user_id = ?`,
         [referredUserId, referrerId]
       );
+      
+      if (!existing || existing.length === 0) {
+        await pool.query(
+          `INSERT INTO referral_bets (referred_user_id, referrer_user_id, bet_amount, total_bet_amount, bonus_credited)
+           VALUES (?, ?, 0, 0, false)`,
+          [referredUserId, referrerId]
+        );
+      }
+      
+      console.log(`✅ [REFERRAL] Referência registrada: usuário ${referredUserId} foi indicado por ${referrerId}`);
+      return true;
     }
     
-    console.log(`✅ [REFERRAL] Referência registrada: usuário ${referredUserId} foi indicado por ${referrerId}`);
-    return true;
+    // Código não encontrado
+    console.warn(`⚠️ [REFERRAL] Código de referência não encontrado: ${code}`);
+    return false;
   } catch (error: any) {
     console.error("❌ [REFERRAL] Erro ao registrar referência:", error.message);
     return false;
